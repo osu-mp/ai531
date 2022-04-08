@@ -20,6 +20,13 @@ orientUp = '^'
 orientDown = 'v'
 
 """
+TODO
+-add wall
+-add counter
+
+"""
+
+"""
 The environment is a grid of states:
     x = dirty
     o = clean
@@ -43,6 +50,7 @@ class VacuumAgent:
         self.env = env
         self.rowPos = roomSize - 1
         self.colPos = 0
+
 
         self.cellState = self.env[self.rowPos][self.colPos]              # saves dirty/clean state of cell
         self.orientation = orientUp
@@ -163,6 +171,8 @@ class VacuumAgent:
         # if facing up, wall is at rowPos of 0
         if self.orientation == orientUp and self.rowPos == 0:
             return 1
+
+
         return 0
 
 class ReflexAgent(VacuumAgent):
@@ -198,6 +208,18 @@ class TestAgents(unittest.TestCase):
         # init environment to 10x10 grid of dirty cells
         return [[floorDirty for x in range(10)] for y in range(10)]
 
+    def get4RoomGrid(self):
+        env = '''
+x x x x x x x x x x
+x x x x | x x x x x
+x x x x | x x x x x
+x x x x | x x x x x
+x | | | | | | | | x
+x x x x | x x x x x
+x x x x | x x x x x
+x x x x | x x x x x
+x x x x | x x x x x
+x x x x x x x x x x'''
 
     def test_agent_actions(self):
         # init environment to 10x10 grid of dirty cells
