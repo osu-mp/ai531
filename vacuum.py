@@ -138,9 +138,16 @@ class VacuumAgent:
         Return true if there is a wall directly in front of vacuum, else false
         :return:
         """
+        
         # if facing left, wall is at colPos of 0
         if self.orientation == '<' and self.colPos == 0:
             return True
+        if self.orientation == '>' and self.colPos == 9:
+            return True
+        if self.orientation == 'v' and self.rowPos == 0:
+            return True  
+        if self.orientation == '^' and self.rowPos == 9:
+            return True       
         # TODO right, down, up...
         return False
 
