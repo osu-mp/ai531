@@ -60,15 +60,14 @@ class VacuumAgent:
         self.env[self.rowPos][self.colPos] = self.cellState
 
         # do movement
-        match self.orientation:
-            case '^':
-                self.rowPos -= 1
-            case 'v':
-                self.rowPos += 1
-            case '>':
-                self.colPos += 1
-            case '<':
-                self.colPos -= 1
+        if self.orientation == '^':
+            self.rowPos -= 1
+        if self.orientation == 'v':
+            self.rowPos += 1
+        if self.orientation == '>':
+            self.colPos += 1
+        if self.orientation == '<':
+            self.colPos -= 1
 
         # ensure the agent remains on the board
         self.keepPositionValid()
@@ -83,15 +82,14 @@ class VacuumAgent:
         print("Turning Right")
 
         # rotate the agent 90 degrees right
-        match self.orientation:
-            case '^':
-                self.orientation = '>'
-            case 'v':
-                self.orientation = '<'
-            case '>':
-                self.orientation = 'v'
-            case '<':
-                self.orientation = '^'
+        if self.orientation == '^':
+            self.orientation = '>'
+        elif self.orientation == 'v':
+            self.orientation = '<'
+        elif self.orientation == '>':
+            self.orientation = 'v'
+        elif self.orientation =='<':
+            self.orientation = '^'
 
         self.env[self.rowPos][self.colPos] = self.orientation
 
@@ -101,15 +99,14 @@ class VacuumAgent:
         print("Turning Left")
 
         # rotate the agent 90 degrees left
-        match self.orientation:
-            case '^':
-                self.orientation = '<'
-            case 'v':
-                self.orientation = '>'
-            case '>':
-                self.orientation = '^'
-            case '<':
-                self.orientation = 'v'
+        if self.orientation == '^':
+            self.orientation = '<'
+        elif self.orientation == 'v':
+            self.orientation = '>'
+        elif self.orientation == '>':
+            self.orientation = '^'
+        elif self.orientation == '<':
+            self.orientation = 'v'
 
         self.env[self.rowPos][self.colPos] = self.orientation
 
