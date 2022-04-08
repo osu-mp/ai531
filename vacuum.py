@@ -34,7 +34,7 @@ class VacuumAgent:
         self.env = env
         self.rowPos = 9
         self.colPos = 0
-
+        
         self.cellState = self.env[self.rowPos][self.colPos]              # saves dirty/clean state of cell
         self.orientation = '^'
         self.env[self.rowPos][self.colPos] = self.orientation
@@ -46,9 +46,9 @@ class VacuumAgent:
         :return:
         """
         self.rowPos = min(self.rowPos, 9)
-        self.rowPow = max(self.rowPos, 0)
+        self.rowPos = max(self.rowPos, 0)
         self.colPos = min(self.colPos, 9)
-        self.colPow = max(self.colPos, 0)
+        self.colPos = max(self.colPos, 0)
 
     def goForward(self):
         """
@@ -132,6 +132,17 @@ class VacuumAgent:
         :return:
         """
         print("Do something")
+
+    def isWallInFront(self):
+        """
+        Return true if there is a wall directly in front of vacuum, else false
+        :return:
+        """
+        # if facing left, wall is at colPos of 0
+        if self.orientation == '<' and self.colPos == 0:
+            return True
+        # TODO right, down, up...
+        return False
 
 class ReflexAgent(VacuumAgent):
     def __init__(self, env):
