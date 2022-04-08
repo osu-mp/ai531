@@ -21,9 +21,11 @@ orientDown = 'v'
 
 """
 TODO
--add wall
--add counter
-
+-add wall       Joe
+-add counter    Joe
+-reflex agent   Joe
+-random agent   Wadood
+-memory agent   Matthew
 """
 
 """
