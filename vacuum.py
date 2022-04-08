@@ -7,8 +7,17 @@
 
 import unittest
 
+# constants
 floorDirty = 'x'
 floorClean = 'o'
+
+roomSize = 10                                           # room is N x N grid
+
+# vacuum orientation
+orientLeft = '<'
+orientRight = '>'
+orientUp = '^'
+orientDown = 'v'
 
 """
 The environment is a grid of states:
@@ -32,11 +41,11 @@ class VacuumAgent:
         print("Agent: %s" % name)
         self.name = name
         self.env = env
-        self.rowPos = 9
+        self.rowPos = roomSize - 1
         self.colPos = 0
-        
+
         self.cellState = self.env[self.rowPos][self.colPos]              # saves dirty/clean state of cell
-        self.orientation = '^'
+        self.orientation = orientUp
         self.env[self.rowPos][self.colPos] = self.orientation
 
     def keepPositionValid(self):
@@ -45,9 +54,9 @@ class VacuumAgent:
         NOTE: hardcoded to 10x10 room
         :return:
         """
-        self.rowPos = min(self.rowPos, 9)
+        self.rowPos = min(self.rowPos, roomSize)
         self.rowPos = max(self.rowPos, 0)
-        self.colPos = min(self.colPos, 9)
+        self.colPos = min(self.colPos, roomSize)
         self.colPos = max(self.colPos, 0)
 
     def goForward(self):
@@ -55,22 +64,26 @@ class VacuumAgent:
         Given the current orientation, move one cell forward
         :return:
         """
+        if self.isWallInFront() > 0:
+            print("Wall in front of vacuum, unable to move forward")
+            return
+
         print("Moving forward")
         # restore cell in env to previous state (clean or dirty)
         self.env[self.rowPos][self.colPos] = self.cellState
 
         # do movement
-        if self.orientation == '^':
+        if self.orientation == orientUp:
             self.rowPos -= 1
-        if self.orientation == 'v':
+        if self.orientation == orientDown:
             self.rowPos += 1
-        if self.orientation == '>':
+        if self.orientation == orientRight:
             self.colPos += 1
-        if self.orientation == '<':
+        if self.orientation == orientLeft:
             self.colPos -= 1
 
         # ensure the agent remains on the board
-        self.keepPositionValid()
+        self.keepPositionValid()                    # TODO: is this needed anymore?
 
         # save the cell state and put the agent in the new position
         self.cellState = self.env[self.rowPos][self.colPos]
@@ -82,14 +95,14 @@ class VacuumAgent:
         print("Turning Right")
 
         # rotate the agent 90 degrees right
-        if self.orientation == '^':
-            self.orientation = '>'
-        elif self.orientation == 'v':
-            self.orientation = '<'
-        elif self.orientation == '>':
-            self.orientation = 'v'
-        elif self.orientation =='<':
-            self.orientation = '^'
+        if self.orientation == orientUp:
+            self.orientation = orientRight
+        elif self.orientation == orientDown:
+            self.orientation = orientLeft
+        elif self.orientation == orientRight:
+            self.orientation = orientDown
+        elif self.orientation == orientLeft:
+            self.orientation = orientUp
 
         self.env[self.rowPos][self.colPos] = self.orientation
 
@@ -99,14 +112,14 @@ class VacuumAgent:
         print("Turning Left")
 
         # rotate the agent 90 degrees left
-        if self.orientation == '^':
-            self.orientation = '<'
-        elif self.orientation == 'v':
-            self.orientation = '>'
-        elif self.orientation == '>':
-            self.orientation = '^'
-        elif self.orientation == '<':
-            self.orientation = 'v'
+        if self.orientation == orientUp:
+            self.orientation = orientLeft
+        elif self.orientation == orientDown:
+            self.orientation = orientRight
+        elif self.orientation == orientRight:
+            self.orientation = orientUp
+        elif self.orientation == orientLeft:
+            self.orientation = orientDown
 
         self.env[self.rowPos][self.colPos] = self.orientation
 
@@ -135,21 +148,22 @@ class VacuumAgent:
 
     def isWallInFront(self):
         """
-        Return true if there is a wall directly in front of vacuum, else false
+        Return 1 if there is a wall directly in front of vacuum, else 0
         :return:
         """
-        
         # if facing left, wall is at colPos of 0
-        if self.orientation == '<' and self.colPos == 0:
-            return True
-        if self.orientation == '>' and self.colPos == 9:
-            return True
-        if self.orientation == 'v' and self.rowPos == 0:
-            return True  
-        if self.orientation == '^' and self.rowPos == 9:
-            return True       
-        # TODO right, down, up...
-        return False
+        if self.orientation == orientLeft and self.colPos == 0:
+            return 1
+        # if facing right, wall is at colPos of 'roomSize'
+        if self.orientation == orientRight and self.colPos == roomSize - 1:
+            return 1
+        # if facing down, wall is at rowPos of roomSize
+        if self.orientation == orientDown and self.rowPos == roomSize - 1:
+            return 1
+        # if facing up, wall is at rowPos of 0
+        if self.orientation == orientUp and self.rowPos == 0:
+            return 1
+        return 0
 
 class ReflexAgent(VacuumAgent):
     def __init__(self, env):
