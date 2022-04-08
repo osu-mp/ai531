@@ -7,6 +7,9 @@
 
 import unittest
 
+floorDirty = 'x'
+floorClean = 'o'
+
 """
 The environment is a grid of states:
     x = dirty
@@ -22,6 +25,7 @@ Available actions:
 -suck dirt
 -turn off
 """
+
 
 class VacuumAgent:
     def __int__(self, name, env):
@@ -113,7 +117,7 @@ class VacuumAgent:
 
     def suckDirt(self):
         print("Sucking dirt")
-        self.cellState = 'o'
+        self.cellState = floorClean
         self.printEnv()
 
     def turnOff(self):
@@ -125,28 +129,50 @@ class VacuumAgent:
         print(*(' '.join(row) for row in self.env), sep='\n')
         print()
 
-    def act(self):
+    def runAction(self):
+        """
+
+        :return:
+        """
         print("Do something")
 
 class ReflexAgent(VacuumAgent):
     def __init__(self, env):
         super().__int__("Memory-less deterministic reflex agent", env)
 
-    # TODO : clean
+    def runAction(self):
+        if self.cellState == floorDirty:
+            return self.suckDirt()
+        if self.cellState == floorClean:
+            return self.goForward()
+        # TODO : implement rest of reflex logic
 
 class RandomReflexAgent(VacuumAgent):
-    def __init__(self):
+    def __init__(self, env):
         super().__int__("Random reflex agent", env)
 
+    def runAction(self):
+        # TODO : implement random logic
+        pass
+
 class DeterministicAgent(VacuumAgent):
-    def __init__(self):
+    def __init__(self, env):
         super().__int__("Model-based reflex agent", env)
+
+    def runAction(self):
+        # TODO : implement deterministic logic
+        pass
 
 class TestAgents(unittest.TestCase):
 
-    def test_agent1(self):
+    def getDirtyGrid(self):
         # init environment to 10x10 grid of dirty cells
-        env = [["X" for x in range(10)] for y in range(10)]
+        return [[floorDirty for x in range(10)] for y in range(10)]
+
+
+    def test_agent_actions(self):
+        # init environment to 10x10 grid of dirty cells
+        env = self.getDirtyGrid()
 
         reflex = ReflexAgent(env)
         reflex.printEnv()
@@ -163,6 +189,18 @@ class TestAgents(unittest.TestCase):
         reflex.goForward()
         reflex.printEnv()
 
+    def test_relfex_run(self):
+        """
+        Run X actions for reflex agent
+        :return:
+        """
+        env = self.getDirtyGrid()
+        reflex = ReflexAgent(env)
+        reflex.runAction()              # suck dirt
+        reflex.runAction()              # move forward
+        reflex.runAction()              # suck dirt
+        reflex.runAction()              # move forward
+        reflex.printEnv()
 
 
 
