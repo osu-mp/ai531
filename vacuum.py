@@ -216,7 +216,7 @@ class RandomReflexAgent(VacuumAgent):
         # action list for randomly genrating an action if the cell if clean
         actionListCleanCell = ["goForward", "goRight", "goLeft"]
 
-        if self.isWallInFront():
+        if self.isWallInFront() > 0:
             actionRotation = ["goRight", "goLeft"]
             actionRotationChoice = random.choice(actionRotation)
             if actionRotationChoice == "goRight":
