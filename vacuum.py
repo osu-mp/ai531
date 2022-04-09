@@ -211,8 +211,7 @@ class RandomReflexAgent(VacuumAgent):
         super().__int__("Random reflex agent", env)
 
     def runAction(self):
-        # action list for randomly genrating an action if the cell if dirty
-        actionListDirtyCell = ["goForward", "goRight", "goLeft", "suckDirt"]
+        # turn off action needs to be implemented if the agent is at starting location
         # action list for randomly genrating an action if the cell if clean
         actionListCleanCell = ["goForward", "goRight", "goLeft"]
 
@@ -227,19 +226,9 @@ class RandomReflexAgent(VacuumAgent):
         #if the no wall in front
         else:
             if self.cellState == floorDirty: 
-                # randomly genrates an action to do with equal probability by default
-                actionChoise = random.choice(actionListDirtyCell)
-                # Check which action is genrated randomly and does it
-                if actionChoise == "goForward":
-                    return self.goForward()
-                if actionChoise == "goRight":
-                    return self.turnRight()
-                if actionChoise == "goLeft":
-                    return self.turnLeft()
-                if actionChoise == "suckDirt":
-                    return self.suckDirt()             
-            
-            # Check which action is genrated randomly and does it(sucking dirt action not available/applicable?)    
+                return self.suckDirt() 
+
+            # Check which action is genrated randomly and does it    
             if self.cellState == floorClean:
                 actionChoise = random.choice(actionListCleanCell) 
                 if actionChoise == "goForward":
@@ -362,11 +351,11 @@ x x x x x x x x x x'''
         """
         env = self.getDirtyGrid()
         reflex = RandomReflexAgent(env)
-        reflex.runAction()              # suck dirt
-        reflex.runAction()              # move forward
-        reflex.runAction()              # suck dirt
-        reflex.runAction()              # move forward
+        for i in range(1300):
+            reflex.runAction()
         reflex.printEnv()
+        clean, dirty = self.getCellStatusCount(env)
+        print("CLEAN: %d  DIRTY: %d " % (clean, dirty))
 
 
    # def test_DeterministicAgent(self):
