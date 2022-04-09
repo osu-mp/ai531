@@ -5,6 +5,7 @@
 # Joe Nguyen
 # Matthew Pacey
 
+import random
 import unittest
 
 # constants
@@ -210,8 +211,41 @@ class RandomReflexAgent(VacuumAgent):
         super().__int__("Random reflex agent", env)
 
     def runAction(self):
+        # action list for randomly genrating an action if the cell if dirty
+        actionListDirtyCell = ["goForward", "goRight", "goLeft", "suckDirt"]
+        # action list for randomly genrating an action if the cell if clean
+        actionListCleanCell = ["goForward", "goRight", "goLeft"]
+
+        if self.isWallInFront():
+            #need to implement logic for when up against the wall
+            return random.choice(actionListDirtyCell) #randomly calls one method/function in the rotation action list
+
+        #if the no wall in front
+        else:
+            if self.cellState == floorDirty: 
+                # randomly genrates an action to do
+                actionChoise = random.choice(actionListDirtyCell)
+                # Check which action is genrated randomly and does it
+                if actionChoise == "goForward":
+                    return self.goForward()
+                if actionChoise == "goRight":
+                    return self.turnRight()
+                if actionChoise == "goLeft":
+                    return self.turnLeft()
+                if actionChoise == "suckDirt":
+                    return self.suckDirt()             
+            
+            # Check which action is genrated randomly and does it(sucking dirt action not available/applicable?)    
+            if self.cellState == floorClean:
+                actionChoise = random.choice(actionListCleanCell) 
+                if actionChoise == "goForward":
+                    return self.goForward()
+                if actionChoise == "goRight":
+                    return self.turnRight()
+                if actionChoise == "goLeft":
+                    return self.turnLeft()
+
         # TODO : implement random logic
-        pass
 
 class DeterministicAgent(VacuumAgent):
     def __init__(self, env):
@@ -298,24 +332,24 @@ x x x x | x x x x x
 x x x x | x x x x x
 x x x x x x x x x x'''
 
-    def test_agent_actions(self):
-        # init environment to 10x10 grid of dirty cells
-        env = self.getDirtyGrid()
+    #def test_agent_actions(self):
+    #    # init environment to 10x10 grid of dirty cells
+    #    env = self.getDirtyGrid()
+    #
+    #    reflex = ReflexAgent(env)
+    #    reflex.printEnv()
 
-        reflex = ReflexAgent(env)
-        reflex.printEnv()
-
-        reflex.suckDirt()               # clean first square
-        reflex.goForward()              # move up one and clean
-        reflex.suckDirt()
-        reflex.turnRight()              # turn around (2 right turns = 180 deg)
-        reflex.turnRight()
-        reflex.goForward()
-        reflex.goForward()              # try to leave board, should stay
-        reflex.turnLeft()               # turn left
-        reflex.goForward()              # go forward twice, skipping to clean a cell
-        reflex.goForward()
-        reflex.printEnv()
+    #    reflex.suckDirt()               # clean first square
+    #    reflex.goForward()              # move up one and clean
+    #    reflex.suckDirt()
+    #    reflex.turnRight()              # turn around (2 right turns = 180 deg)
+    #    reflex.turnRight()
+    #    reflex.goForward()
+    #    reflex.goForward()              # try to leave board, should stay
+    #    reflex.turnLeft()               # turn left
+    #    reflex.goForward()              # go forward twice, skipping to clean a cell
+    #    reflex.goForward()
+    #    reflex.printEnv()
 
     def test_relfex_run(self):
         """
@@ -323,7 +357,7 @@ x x x x x x x x x x'''
         :return:
         """
         env = self.getDirtyGrid()
-        reflex = ReflexAgent(env)
+        reflex = RandomReflexAgent(env)
         reflex.runAction()              # suck dirt
         reflex.runAction()              # move forward
         reflex.runAction()              # suck dirt
@@ -331,27 +365,27 @@ x x x x x x x x x x'''
         reflex.printEnv()
 
 
-    def test_DeterministicAgent(self):
+   # def test_DeterministicAgent(self):
         """
         Analysis for model based deterministic w/ memory agent
         :return:
         """
-        env = self.getDirtyGrid()
-        agent = DeterministicAgent(env)
-        clean, dirty = self.getCellStatusCount(env)
-        print("Starting:    CLEAN: %d,  DIRTY %d" % (clean, dirty))
+    #    env = self.getDirtyGrid()
+    #    agent = DeterministicAgent(env)
+    #    clean, dirty = self.getCellStatusCount(env)
+    #    print("Starting:    CLEAN: %d,  DIRTY %d" % (clean, dirty))
 
-        for i in range(197):
-            agent.runAction()
+    #    for i in range(197):
+    #        agent.runAction()
 
-        clean, dirty = self.getCellStatusCount(env)
-        print("Ending:     CLEAN: %d,  DIRTY %d" % (clean, dirty))
+    #    clean, dirty = self.getCellStatusCount(env)
+    #    print("Ending:     CLEAN: %d,  DIRTY %d" % (clean, dirty))
 
-        agent.printEnv()
+    #    agent.printEnv()
 
         # this agent is currently able to clean 90% of the room in 197 moves
-        self.assertEqual(90, clean, "Only cleaned: %d" % clean)
-        print("Memory agent cleaned 90 cells in 197 moves")
+    #    self.assertEqual(90, clean, "Only cleaned: %d" % clean)
+    #    print("Memory agent cleaned 90 cells in 197 moves")
 
 
 
