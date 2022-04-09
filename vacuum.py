@@ -118,7 +118,8 @@ class VacuumAgent:
 
         self.env[self.rowPos][self.colPos] = self.orientation
 
-        self.printEnv()
+        if debug:
+            self.printEnv()
 
     def turnLeft(self):
         print("Turning Left")
@@ -222,22 +223,42 @@ class DeterministicAgent(VacuumAgent):
         # repeat until the top
         self.movingRight = 1        #
 
+        # if we have hit a wall and turned, try to go up one when this equals 1
+        self.moveUpOne = 0
+
     def runAction(self):
         if self.cellState == floorDirty:
             return self.suckDirt()
         if self.cellState == floorClean:
             # if it runs into a wall: go up one cell and turn 180 degrees the other way
             if self.isWallInFront():
+                # if going right, turn up (and set var to go up one cell)
                 if self.orientation == orientRight and self.movingRight:
-                    self.turnLeft()         # turn facing up
-                elif self.movingRight == orientUp and self.movingRight:
+                    self.moveUpOne = 1
+                    self.movingRight = 0            # stop moving right, go left
+                    return self.turnLeft()          # turn facing up
+                # if going left, turn up (and set var to go up one cell)
+                if self.orientation == orientLeft and self.movingRight == 0:
+                    self.moveUpOne = 1
+                    self.movingRight = 1            # stop moving left, go right
+                    return self.turnRight()
+
+                if self.movingRight == orientUp and self.movingRight:
                     self.movingRight = 0
-                    self.goForward()
+                    return self.goForward()
+            # no wall in front
             else:
-                if self.orientation == orientUp and self.movingRight == 0:
-                    self.turnLeft()
-                elif self.orientation == orientLeft and self.movingRight == 0:
-                    self.goForward()
+                # pointed up and move up enabled, go forward one
+                if self.orientation == orientUp and self.moveUpOne:
+                    self.moveUpOne = 0
+                    return self.goForward()
+                # pointed up and move up one disabled, turn left or right
+                if self.orientation == orientUp and self.moveUpOne == 0:
+                    if self.movingRight:
+                        return self.turnRight()
+                    else:
+                        return self.turnLeft()
+
             return self.goForward()
 
 class TestAgents(unittest.TestCase):
@@ -277,7 +298,7 @@ x x x x | x x x x x
 x x x x | x x x x x
 x x x x x x x x x x'''
 
-    def skip_test_agent_actions(self):
+    def test_agent_actions(self):
         # init environment to 10x10 grid of dirty cells
         env = self.getDirtyGrid()
 
@@ -296,7 +317,7 @@ x x x x x x x x x x'''
         reflex.goForward()
         reflex.printEnv()
 
-    def skip_test_relfex_run(self):
+    def test_relfex_run(self):
         """
         Run X actions for reflex agent
         :return:
@@ -320,14 +341,17 @@ x x x x x x x x x x'''
         clean, dirty = self.getCellStatusCount(env)
         print("Starting:    CLEAN: %d,  DIRTY %d" % (clean, dirty))
 
-        for i in range(50):
+        for i in range(197):
             agent.runAction()
 
         clean, dirty = self.getCellStatusCount(env)
         print("Ending:     CLEAN: %d,  DIRTY %d" % (clean, dirty))
 
         agent.printEnv()
-        self.assertEqual(10, clean, "Only cleaned: %d" % clean)
+
+        # this agent is currently able to clean 90% of the room in 197 moves
+        self.assertEqual(90, clean, "Only cleaned: %d" % clean)
+        print("Memory agent cleaned 90 cells in 197 moves")
 
 
 
