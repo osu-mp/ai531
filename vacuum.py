@@ -211,31 +211,24 @@ class RandomReflexAgent(VacuumAgent):
         super().__int__("Random reflex agent", env)
 
     def runAction(self):
-        # action list for randomly genrating an action if the cell if dirty
-        actionListDirtyCell = ["goForward", "goRight", "goLeft", "suckDirt"]
+        # turn off action needs to be implemented if the agent is at starting location
         # action list for randomly genrating an action if the cell if clean
         actionListCleanCell = ["goForward", "goRight", "goLeft"]
 
-        if self.isWallInFront():
-            #need to implement logic for when up against the wall
-            return random.choice(actionListDirtyCell) #randomly calls one method/function in the rotation action list
+        if self.isWallInFront() > 0:
+            actionRotation = ["goRight", "goLeft"]
+            actionRotationChoice = random.choice(actionRotation)
+            if actionRotationChoice == "goRight":
+                return self.turnRight()
+            if actionRotationChoice == "goLeft":
+                return self.turnLeft()
 
         #if the no wall in front
         else:
             if self.cellState == floorDirty: 
-                # randomly genrates an action to do
-                actionChoise = random.choice(actionListDirtyCell)
-                # Check which action is genrated randomly and does it
-                if actionChoise == "goForward":
-                    return self.goForward()
-                if actionChoise == "goRight":
-                    return self.turnRight()
-                if actionChoise == "goLeft":
-                    return self.turnLeft()
-                if actionChoise == "suckDirt":
-                    return self.suckDirt()             
-            
-            # Check which action is genrated randomly and does it(sucking dirt action not available/applicable?)    
+                return self.suckDirt() 
+
+            # Check which action is genrated randomly and does it    
             if self.cellState == floorClean:
                 actionChoise = random.choice(actionListCleanCell) 
                 if actionChoise == "goForward":
@@ -318,6 +311,7 @@ class TestAgents(unittest.TestCase):
                     dirtyCount += 1
 
         return (cleanCount, dirtyCount)
+    
 
     def get4RoomGrid(self):
         env = '''
@@ -356,14 +350,25 @@ x x x x x x x x x x'''
         Run X actions for reflex agent
         :return:
         """
-        env = self.getDirtyGrid()
-        reflex = RandomReflexAgent(env)
-        reflex.runAction()              # suck dirt
-        reflex.runAction()              # move forward
-        reflex.runAction()              # suck dirt
-        reflex.runAction()              # move forward
-        reflex.printEnv()
 
+        totalActionCounter = []
+        Avg = 0
+        for i in range(50):
+            clean = 0
+            actionCounter = 0
+            env = self.getDirtyGrid()
+            reflex = RandomReflexAgent(env)
+            while clean < 90:
+                reflex.runAction()
+                clean, dirty = self.getCellStatusCount(env)
+                actionCounter = actionCounter + 1
+            
+            reflex.printEnv()
+            print("CLEAN CELLS: %d " % clean)
+            totalActionCounter.append(actionCounter)
+        Avg = sum(totalActionCounter) / len(totalActionCounter)
+        print(totalActionCounter)
+        print("Avg of 50 trials: %d " % Avg)
 
    # def test_DeterministicAgent(self):
         """
