@@ -217,13 +217,17 @@ class RandomReflexAgent(VacuumAgent):
         actionListCleanCell = ["goForward", "goRight", "goLeft"]
 
         if self.isWallInFront():
-            #need to implement logic for when up against the wall
-            return random.choice(actionListDirtyCell) #randomly calls one method/function in the rotation action list
+            actionRotation = ["goRight", "goLeft"]
+            actionRotationChoice = random.choice(actionRotation)
+            if actionRotationChoice == "goRight":
+                return self.turnRight()
+            if actionRotationChoice == "goLeft":
+                return self.turnLeft()
 
         #if the no wall in front
         else:
             if self.cellState == floorDirty: 
-                # randomly genrates an action to do
+                # randomly genrates an action to do with equal probability by default
                 actionChoise = random.choice(actionListDirtyCell)
                 # Check which action is genrated randomly and does it
                 if actionChoise == "goForward":
