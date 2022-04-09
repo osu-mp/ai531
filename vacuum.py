@@ -311,6 +311,7 @@ class TestAgents(unittest.TestCase):
                     dirtyCount += 1
 
         return (cleanCount, dirtyCount)
+    
 
     def get4RoomGrid(self):
         env = '''
@@ -349,14 +350,25 @@ x x x x x x x x x x'''
         Run X actions for reflex agent
         :return:
         """
-        env = self.getDirtyGrid()
-        reflex = RandomReflexAgent(env)
-        for i in range(1300):
-            reflex.runAction()
-        reflex.printEnv()
-        clean, dirty = self.getCellStatusCount(env)
-        print("CLEAN: %d  DIRTY: %d " % (clean, dirty))
 
+        totalActionCounter = []
+        Avg = 0
+        for i in range(50):
+            clean = 0
+            actionCounter = 0
+            env = self.getDirtyGrid()
+            reflex = RandomReflexAgent(env)
+            while clean < 90:
+                reflex.runAction()
+                clean, dirty = self.getCellStatusCount(env)
+                actionCounter = actionCounter + 1
+            
+            reflex.printEnv()
+            print("CLEAN CELLS: %d " % clean)
+            totalActionCounter.append(actionCounter)
+        Avg = sum(totalActionCounter) / len(totalActionCounter)
+        print(totalActionCounter)
+        print("Avg of 50 trials: %d " % Avg)
 
    # def test_DeterministicAgent(self):
         """
