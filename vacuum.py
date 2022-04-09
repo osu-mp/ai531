@@ -26,11 +26,19 @@ orientDown = 'v'
 debug = False  # set true to print env after every action
 """
 TODO
--add wall       Joe
--add counter    Joe
--reflex agent   Joe
--random agent   Wadood
--memory agent   Matthew
+Matthew: assign probabilities in random agent
+Matthew: fix memory agent
+Wadood: 2D env test for random
+Joe/Wadood: start report
+
+Report:
+1   each
+2   each
+3   Joe
+4   Wadood
+5   Matthew
+6   Wadood & Joe
+7   Joe (each too)
 """
 
 """
