@@ -23,7 +23,7 @@ orientRight = '>'
 orientUp = '^'
 orientDown = 'v'
 
-debug = False  # set true to print env after every action
+debug = True  # set true to print env after every action
 """
 TODO
 Matthew: assign probabilities in random agent
@@ -117,7 +117,7 @@ class VacuumAgent:
             self.colPos -= 1
 
         # ensure the agent remains on the board
-        self.keepPositionValid()  # TODO: is this needed anymore?
+        #self.keepPositionValid()  # TODO: is this needed anymore?
 
         # save the cell state and put the agent in the new position
         self.cellState = self.env[self.rowPos][self.colPos]
@@ -187,7 +187,7 @@ class VacuumAgent:
 
         :return:
         """
-        print("Do something")
+        raise Exception("This should be implemented by agent")
 
     def isBoundaryInFront(self):
         # boundary
@@ -315,7 +315,7 @@ class RandomReflexAgent(VacuumAgent):
         # TODO : implement random logic
 
 
-class DeterministicAgent(VacuumAgent):
+class DeterministicAgentWithMemory(VacuumAgent):
     def __init__(self, env):
         super().__int__("Model-based reflex agent with memory", env)
         self.turnRight()
@@ -323,12 +323,85 @@ class DeterministicAgent(VacuumAgent):
         # use this var to tell the agent to go as far right as possible
         # then up one and then start moving left until a wall is hit
         # repeat until the top
-        self.movingRight = 1  #
+        # self.movingRight = 1  #
 
         # if we have hit a wall and turned, try to go up one when this equals 1
-        self.moveUpOne = 0
+        # self.moveUpOne = 0
+
+        self.currState = 0
+
+        """
+        0 = LFL: go left, go forward, go left
+        1 = FL : go forward, go left
+        2 = L  : go left
+        3 = RFR: go right, go forward, go right
+        4 = FR : forward, right
+        5 = R  : right
+        """
+
 
     def runAction(self):
+        print("CurrentState %d" % self.currState)
+        if self.cellState == floorDirty:
+            return self.suckDirt()
+        # else cell is clean
+
+        # TODO: what is this for?
+        if self.isHome() and self.currState != 0:
+            self.currState = 1
+            return self.goForward()
+
+        # keep moving until you hit a wall and then turn left
+        if self.currState == 0:
+            if not self.isWallInFront():
+                return self.goForward()
+            self.currState = 1
+            return self.turnLeft()
+
+        # try to go forward once
+        if self.currState == 1:
+            self.currState = 2
+            return self.goForward()
+
+        # turn left once
+        if self.currState == 2:
+            self.currState = 3
+            return self.turnLeft()
+
+        # keep going forward until you hit a wall and then turn right
+        if self.currState == 3:
+            if not self.isWallInFront():
+                return self.goForward()
+            self.currState = 4
+            return self.turnRight()
+
+        # try to go forward once
+        if self.currState == 4:
+            self.currState = 5
+            return self.goForward()
+
+        # turn right once more
+        if self.currState == 5:
+            self.currState = 6
+            return self.turnRight()
+
+        # keep going forward until you hit a wall and then reset to first state
+        if self.currState == 6:
+            if not self.isWallInFront():
+                return self.goForward()
+            self.currState = 0
+            return self.turnLeft()
+
+        # if self.currState == 7:
+        #     self.currState = 0
+        #     return self.goForward()
+
+        # should not get here
+        print("Last ENV")
+        self.printEnv()
+        raise Exception("what do I do?")
+
+    def runAction_old(self):
         if self.cellState == floorDirty:
             return self.suckDirt()
         if self.cellState == floorClean:
@@ -345,9 +418,11 @@ class DeterministicAgent(VacuumAgent):
                     self.movingRight = 1  # stop moving left, go right
                     return self.turnRight()
 
-                if self.movingRight == orientUp and self.movingRight:
+                if self.orientation == orientUp and self.movingRight:
                     self.movingRight = 0
-                    return self.goForward()
+                    return self.turnLeft()
+                if self.orientation == orientUp and self.movingRight == 0:
+                    return self.turnLeft()
             # no wall in front
             else:
                 # pointed up and move up enabled, go forward one
@@ -385,6 +460,8 @@ class TestAgents(unittest.TestCase):
                     cleanCount += 1
                 elif val == floorDirty:
                     dirtyCount += 1
+                else:
+                    print
 
         return (cleanCount, dirtyCount)
     
@@ -421,7 +498,7 @@ class TestAgents(unittest.TestCase):
         env[X][roomSize - 1] = floorDirty
         return env
 
-    def test_4room(self):
+    def skip_test_4room(self):
         env = self.get4RoomGrid()
         reflex = ReflexAgent(env)
         reflex.printEnv()
@@ -449,13 +526,13 @@ class TestAgents(unittest.TestCase):
         # print(env)
   
 
-    def test_nomem_DeterministicAgent(self):
+    def skip_test_nomem_DeterministicAgent(self):
         env = self.get4RoomGrid()
         agent = ReflexAgent(env)
         agent.run()
         agent.print_result()
 
-   def test_random_Agent(self):
+    def skip_test_random_Agent(self):
         totalActionCounter = []
         Avg = 0
         for i in range(50):
@@ -475,27 +552,58 @@ class TestAgents(unittest.TestCase):
         print(totalActionCounter)
         print("Avg of 50 trials: %d " % Avg)
 
-   # def test_DeterministicAgent(self):
+    def skip_test_MemoryAgent(self):
         """
         Analysis for model based deterministic w/ memory agent
         :return:
         """
-    #    env = self.getDirtyGrid()
-    #    agent = DeterministicAgent(env)
-    #    clean, dirty = self.getCellStatusCount(env)
-    #    print("Starting:    CLEAN: %d,  DIRTY %d" % (clean, dirty))
+        env = self.getDirtyGrid()
+        agent = DeterministicAgentWithMemory(env)
+        clean, dirty = self.getCellStatusCount(env)
+        print("Starting:    CLEAN: %d,  DIRTY %d" % (clean, dirty))
 
-    #    for i in range(197):
-    #        agent.runAction()
+        actionCount = 0
+        for i in range(300):
+           agent.runAction()
+           actionCount += 1
 
-    #    clean, dirty = self.getCellStatusCount(env)
-    #    print("Ending:     CLEAN: %d,  DIRTY %d" % (clean, dirty))
+           clean, dirty = self.getCellStatusCount(agent.getEnv())
+           if dirty == 0:
+               break
 
-    #    agent.printEnv()
+        print("Ending:     CLEAN: %d,  DIRTY %d" % (clean, dirty))
 
-        # this agent is currently able to clean 90% of the room in 197 moves
-    #    self.assertEqual(90, clean, "Only cleaned: %d" % clean)
-    #    print("Memory agent cleaned 90 cells in 197 moves")
+        agent.printEnv()
+
+        self.assertEqual(100, clean)
+        print("Cleaned all cells in %d actions" % actionCount)
+
+    def test_MemoryAgent_4Room(self):
+        """
+        Analysis for model based deterministic w/ memory agent in 4 room environment
+        :return:
+        """
+        env = self.get4RoomGrid()
+        agent = DeterministicAgentWithMemory(env)
+        clean, dirty = self.getCellStatusCount(env)
+
+        print("Starting:    CLEAN: %d,  DIRTY %d" % (clean, dirty))
+
+        actionCount = 0
+        for i in range(1000):
+            agent.runAction()
+            actionCount += 1
+
+            clean, dirty = self.getCellStatusCount(agent.getEnv())
+            if dirty == 0:
+                break
+
+        print("Ending:     CLEAN: %d,  DIRTY %d" % (clean, dirty))
+
+        agent.printEnv()
+
+        self.assertEqual(100, clean)
+        print("Cleaned all cells in %d actions" % actionCount)
 
 
 if __name__ == '__main__':
