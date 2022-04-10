@@ -26,7 +26,6 @@ orientDown = 'v'
 debug = False  # set true to print env after every action
 """
 TODO
-Matthew: assign probabilities in random agent
 Matthew: fix memory agent
 Wadood: 2D env test for random
 Joe/Wadood: start report
