@@ -371,20 +371,17 @@ class DeterministicAgentWithMemory(VacuumAgent):
 
         if self.currState == 5:
             self.currState = 6
+            # NOTE: if you return to state 0 (instead of 6) here, the agent can clean
+            # 100% of the single room environment. However, by moving to state 6, the
+            # agent can clean more of the 4 room case, so it's likely better in a real world env.
             return self.turnRight()
 
         if self.currState == 6:
-            #if not self.isWallInFront():
-            #    self.goForward()
             self.currState = 0
             return self.turnRight()
 
-
-
         # should not get here
-        print("Last ENV")
-        self.printEnv()
-        raise Exception("what do I do?")
+        raise Exception("Agent should have picked an action before getting here")
 
 class TestAgents(unittest.TestCase):
 
