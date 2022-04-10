@@ -290,11 +290,11 @@ class RandomReflexAgent(VacuumAgent):
         actionListCleanCell = ["goForward", "goRight", "goLeft"]
 
         if self.isWallInFront() > 0:
-            actionRotation = ["goRight", "goLeft"]
-            actionRotationChoice = random.choice(actionRotation)
-            if actionRotationChoice == "goRight":
+            randNum = random.randint(0, 100)
+            # biased to turn right 85% of the time, left 15%
+            if randNum <= 85:
                 return self.turnRight()
-            if actionRotationChoice == "goLeft":
+            else:
                 return self.turnLeft()
 
         #if the no wall in front
@@ -304,15 +304,14 @@ class RandomReflexAgent(VacuumAgent):
 
             # Check which action is genrated randomly and does it    
             if self.cellState == floorClean:
-                actionChoise = random.choice(actionListCleanCell) 
-                if actionChoise == "goForward":
+                # biased to move forward 85% of the time, turn right 10%, left 5%
+                randNum = random.randint(0, 100)
+                if randNum <= 85:
                     return self.goForward()
-                if actionChoise == "goRight":
+                if randNum <= 95:
                     return self.turnRight()
-                if actionChoise == "goLeft":
+                else:
                     return self.turnLeft()
-
-        # TODO : implement random logic
 
 
 class DeterministicAgent(VacuumAgent):
@@ -455,7 +454,7 @@ class TestAgents(unittest.TestCase):
         agent.run()
         agent.print_result()
 
-   def test_random_Agent(self):
+    def test_random_Agent(self):
         totalActionCounter = []
         Avg = 0
         for i in range(50):
@@ -474,6 +473,35 @@ class TestAgents(unittest.TestCase):
         Avg = sum(totalActionCounter) / len(totalActionCounter)
         print(totalActionCounter)
         print("Avg of 50 trials: %d " % Avg)
+
+        raise Exception("Avg of 50 trials: %d " % Avg)
+
+    def test_random_Agent_4_room(self):
+        totalActionCounter = []
+        Avg = 0
+
+        env = self.get4RoomGrid()
+        clean, dirty = self.getCellStatusCount(env)
+        cleanThreshold = dirty * .9                     # 90% of initial cells cleaned
+
+        for i in range(50):
+            clean = 0
+            actionCounter = 0
+            env = self.get4RoomGrid()
+            reflex = RandomReflexAgent(env)
+            while clean < cleanThreshold:
+                reflex.runAction()
+                clean, dirty = self.getCellStatusCount(env)
+                actionCounter = actionCounter + 1
+
+            reflex.printEnv()
+            print("CLEAN CELLS: %d " % clean)
+            totalActionCounter.append(actionCounter)
+        Avg = sum(totalActionCounter) / len(totalActionCounter)
+        print(totalActionCounter)
+        print("Avg of 50 trials: %d " % Avg)
+        raise Exception("Avg of 50 trials: %d " % Avg)
+
 
    # def test_DeterministicAgent(self):
         """
