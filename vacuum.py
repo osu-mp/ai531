@@ -447,15 +447,63 @@ class TestAgents(unittest.TestCase):
         # reflex.printEnv()
 
         # print(env)
-  
 
-    def test_nomem_DeterministicAgent(self):
+
+    def test_nomem_DeterministicAgent_single_room(self):
+        env = self.getDirtyGrid()
+        agent = ReflexAgent(env)
+        clean, dirty = self.getCellStatusCount(env)
+        starting_dirty = dirty
+
+        ninety_percent = dirty * .9
+
+        print("Starting:    CLEAN: %d,  DIRTY %d" % (clean, dirty))
+
+        actionCount = 0
+        for i in range(500):
+            agent.runAction()
+            actionCount += 1
+
+            clean, dirty = self.getCellStatusCount(agent.getEnv())
+            if clean == 36 or clean > ninety_percent:
+                break
+
+        print("Ending:     CLEAN: %d,  DIRTY %d" % (clean, dirty))
+
+        if debug:
+            agent.printEnv()
+
+        self.assertTrue(clean >= 36)
+        print("Cleaned %d of %d cells in %d actions\n" % (clean, starting_dirty, actionCount))
+
+    def test_nomem_DeterministicAgent_4_room(self):
         env = self.get4RoomGrid()
         agent = ReflexAgent(env)
-        agent.run()
-        agent.print_result()
+        clean, dirty = self.getCellStatusCount(env)
+        starting_dirty = dirty
 
-   def test_random_Agent(self):
+        ninety_percent = dirty * .9
+
+        print("Starting:    CLEAN: %d,  DIRTY %d" % (clean, dirty))
+
+        actionCount = 0
+        for i in range(500):
+            agent.runAction()
+            actionCount += 1
+
+            clean, dirty = self.getCellStatusCount(agent.getEnv())
+            if clean == 36 or clean > ninety_percent:
+                break
+
+        print("Ending:     CLEAN: %d,  DIRTY %d" % (clean, dirty))
+
+        if debug:
+            agent.printEnv()
+
+        self.assertTrue(clean >= 36)
+        print("Cleaned %d of %d cells in %d actions\n" % (clean, starting_dirty, actionCount))
+
+    def test_random_Agent(self):
         totalActionCounter = []
         Avg = 0
         for i in range(50):
