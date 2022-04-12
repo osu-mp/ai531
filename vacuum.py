@@ -9,28 +9,20 @@ import random
 import unittest
 
 # constants
-from unittest import TestSuite
-
-floorDirty = 'x'
+floorDirty = 'x'                        # environment characters
 floorClean = 'o'
 floorWall = 'W'
 
-roomSize = 10  # room is N x N grid
+roomSize = 10                           # default room is N x N grid
 
-# vacuum orientation
-orientLeft = '<'
+orientLeft = '<'                        # vacuum orientations
 orientRight = '>'
 orientUp = '^'
 orientDown = 'v'
 
-debug = False  # set true to print env after every action
+debug = False                           # set true to print env after every action
 """
 TODO
-Matthew: assign probabilities in random agent
-Matthew: fix memory agent
-Wadood: 2D env test for random
-Joe/Wadood: start report
-
 Report:
 1   each
 2   each
@@ -46,9 +38,7 @@ The environment is a grid of states:
     x = dirty
     o = clean
     <^>v = agent facing left, up, right, down
-"""
 
-"""
 Available actions:
 -go forward
 -turn right 90 degrees
@@ -59,7 +49,25 @@ Available actions:
 
 
 class VacuumAgent:
+    """
+    Parent class for all agents. Maintains an copy of the environment and the position
+    of the agent in the environment.
+
+    Each agent should put their specific implementation in 'runAction'
+        -This routine is if <condition> fire <action>
+        -The if conditionals are based on the three percepts:
+            -is cell dirtry/clean
+            -is a wall directly in front of agent
+            -is the agent in the home cell
+        -No memory can be used in the runAction routine (except the memory agent which can use 3 bits)
+    """
     def __int__(self, name, env):
+        """
+        Init shared agent constants
+        :param name:
+        :param env:
+        :return:
+        """
         print("Agent: %s" % name)
         self.name = name
         self.env = env
@@ -75,31 +83,28 @@ class VacuumAgent:
         self.running = True
 
     def isHome(self):
+        """
+        Return True if the agent is in the lower left corner of the env, else False
+        :return:
+        """
         return self.rowPos == roomSize - 1 and self.colPos == 0
 
     def print_result(self):
-        self.printEnv()
-        print(f'{self.num_actions=}, {self.num_clean_cells=}')
-
-    def keepPositionValid(self):
         """
-        Ensure the agent stays in the room
-        NOTE: hardcoded to 10x10 room
+        Print the number of actions run and number of cells cleaned
         :return:
         """
-        self.rowPos = min(self.rowPos, roomSize)
-        self.rowPos = max(self.rowPos, 0)
-        self.colPos = min(self.colPos, roomSize)
-        self.colPos = max(self.colPos, 0)
+        self.printEnv()
+        print(f'{self.num_actions=}, {self.num_clean_cells=}')
 
     def goForward(self):
         """
         Given the current orientation, move one cell forward
-        :return:
+        :return: True if the agent moved forward, False if the agent is blocked
         """
         if self.isWallInFront() > 0:
             print("Wall in front of vacuum, unable to move forward")
-            return
+            return False
 
         if debug:
             print("Moving forward")
@@ -117,15 +122,14 @@ class VacuumAgent:
         if self.orientation == orientLeft:
             self.colPos -= 1
 
-        # ensure the agent remains on the board
-        #self.keepPositionValid()  # TODO: is this needed anymore?
-
         # save the cell state and put the agent in the new position
         self.cellState = self.env[self.rowPos][self.colPos]
         self.env[self.rowPos][self.colPos] = self.orientation
 
         if debug:
             self.printEnv()
+
+        return True
 
     def turnRight(self):
         if debug:
@@ -182,13 +186,17 @@ class VacuumAgent:
             self.printEnv()
 
     def printEnv(self):
+        """
+        Print the environment (used for debugging)
+        :return:
+        """
         print("Current Environment:")
         print(*(' '.join(row) for row in self.env), sep='\n')
         print()
 
     def runAction(self):
         """
-
+        Run a single action (each agent must implement their own version of this)
         :return:
         """
         raise Exception("This should be implemented by agent")
@@ -209,31 +217,28 @@ class VacuumAgent:
             return True
         return False
 
-        # def isAtBoundary(self)
-
     def isActualWallInFront(self):
         """
         Return 1 if there is a wall directly in front of vacuum, else 0
         :return:
         """
-
         # wall
         # if facing left, wall is at colPos of 0
         if self.orientation == orientLeft and self.colPos >= 1:
             if self.env[self.rowPos][self.colPos - 1] == floorWall:
                 return True
 
-                # if facing right, wall is at colPos of 'roomSize'
+        # if facing right, wall is at colPos of 'roomSize'
         if self.orientation == orientRight and self.colPos < roomSize - 1:
             if self.env[self.rowPos][self.colPos + 1] == floorWall:
                 return True
 
-                # if facing down, wall is at rowPos of roomSize
+        # if facing down, wall is at rowPos of roomSize
         if self.orientation == orientDown and self.rowPos < roomSize - 1:
             if self.env[self.rowPos + 1][self.colPos] == floorWall:
                 return True
 
-                # if facing up, wall is at rowPos of 0
+        # if facing up, wall is at rowPos of 0
         if self.orientation == orientUp and self.rowPos >= 1:
             if self.env[self.rowPos - 1][self.colPos] == floorWall:
                 return True
@@ -245,12 +250,11 @@ class VacuumAgent:
         Return 1 if there is a wall directly or the boundary in front of vacuum, else 0
         :return:
         """
-
         return self.isBoundaryInFront() or self.isActualWallInFront()
 
     def getEnv(self):
         """
-        Return the a copy of the current environment
+        Return a copy of the current environment
         Replace the vacuum cell with correct clean/dirty status
         :return:
         """
@@ -326,8 +330,7 @@ class DeterministicAgentWithMemory(VacuumAgent):
 
         self.currState = 0
 
-        """    
-        
+        """
         states (start facing right)        
         0 go right until you hit a wall; if wall, turn left (facing up)
         1 go forward once 
@@ -413,26 +416,6 @@ class TestAgents(unittest.TestCase):
                     print
 
         return (cleanCount, dirtyCount)
-    
-
-    # def get4RoomGrid(self):
-    # assert room_size > 2, "no space left for splitting walls"
-    # # split_X = random.choice(list(range(1, room_size)))
-    # # split_Y = random.choice(list(range(1, room_size)))
-    # X = random.randint(2, room_size - 1)
-    # Y = random.randint(2, room_size - 1)
-    # env = self.getDirtyGrid(room_size)
-    # env[X] = floorWall
-    # env[:, Y] = floorWall
-    # before_X = random.randint(1, X - 1)
-    # before_Y = random.randint(1, Y - 1)
-    # after_X = random.randint(X + 1, room_size)
-    # after_Y = random.randint(Y + 1, room_size)
-    # env[before_X][Y] = floorDirty
-    # env[after_X][Y] = floorDirty
-    # env[X][before_Y] = floorDirty
-    # env[X][after_Y] = floorDirty
-    # return env
 
     def get4RoomGrid(self):
         env = self.getDirtyGrid()
@@ -446,34 +429,6 @@ class TestAgents(unittest.TestCase):
         env[X][0] = floorDirty
         env[X][roomSize - 1] = floorDirty
         return env
-
-    def test_4room(self):
-        env = self.get4RoomGrid()
-        reflex = ReflexAgent(env)
-        reflex.printEnv()
-
-        reflex.suckDirt()  # clean first square
-
-        reflex.goForward()  # move up one and clean
-        reflex.suckDirt()
-        reflex.goForward()  # move up one and clean
-        reflex.suckDirt()
-        reflex.goForward()  # move up one and clean
-        reflex.suckDirt()
-        reflex.goForward()  # move up one and clean
-        reflex.suckDirt()
-        reflex.turnRight()
-        reflex.suckDirt()
-        reflex.goForward()  # move up one and clean
-        reflex.suckDirt()
-        reflex.goForward()  # move up one and clean
-        reflex.suckDirt()
-
-        reflex.print_result()
-        # reflex.printEnv()
-
-        # print(env)
-
 
     def test_nomem_DeterministicAgent_single_room(self):
         env = self.getDirtyGrid()
