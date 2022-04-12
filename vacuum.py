@@ -358,7 +358,8 @@ class DeterministicAgentWithMemory(VacuumAgent):
 
         if self.currState == 1:
             self.currState = 2
-            return self.goForward()
+            if not self.isWallInFront():
+                return self.goForward()
 
         if self.currState == 2:
             self.currState = 3
@@ -371,14 +372,14 @@ class DeterministicAgentWithMemory(VacuumAgent):
             return self.turnRight()
 
         if self.currState == 4:
-            if not self.isWallInFront():
-                self.currState = 5
-                return self.goForward()
-            self.currState = 0
-            return self.turnRight()
+            self.currState = 5
+            return self.goForward()
+
+            #self.currState = 0
+            #return self.turnRight()
 
         if self.currState == 5:
-            self.currState = 6
+            self.currState = 0
             # NOTE: if you return to state 0 (instead of 6) here, the agent can clean
             # 100% of the single room environment. However, by moving to state 6, the
             # agent can clean more of the 4 room case, so it's likely better in a real world env.
@@ -430,7 +431,7 @@ class TestAgents(unittest.TestCase):
         env[X][roomSize - 1] = floorDirty
         return env
 
-    def test_nomem_DeterministicAgent_single_room(self):
+    def skip_test_nomem_DeterministicAgent_single_room(self):
         env = self.getDirtyGrid()
         agent = ReflexAgent(env)
         clean, dirty = self.getCellStatusCount(env)
@@ -458,7 +459,7 @@ class TestAgents(unittest.TestCase):
         self.assertTrue(clean >= 36)
         print("Cleaned %d of %d cells in %d actions\n" % (clean, starting_dirty, actionCount))
 
-    def test_nomem_DeterministicAgent_4_room(self):
+    def skip_test_nomem_DeterministicAgent_4_room(self):
         env = self.get4RoomGrid()
         agent = ReflexAgent(env)
         clean, dirty = self.getCellStatusCount(env)
@@ -487,7 +488,7 @@ class TestAgents(unittest.TestCase):
         print("Cleaned %d of %d cells in %d actions\n" % (clean, starting_dirty, actionCount))
 
 
-    def test_random_Agent(self):
+    def skip_test_random_Agent(self):
         totalActionCounter = []
         Avg = 0
         for i in range(50):
@@ -508,7 +509,7 @@ class TestAgents(unittest.TestCase):
         print(totalActionCounter)
         print("Avg of 50 trials (single room): %d " % Avg)
 
-    def test_random_Agent_4_room(self):
+    def skip_test_random_Agent_4_room(self):
         totalActionCounter = []
         Avg = 0
 
@@ -544,7 +545,6 @@ class TestAgents(unittest.TestCase):
         clean, dirty = self.getCellStatusCount(env)
 
         print("AGENT: %s" % agent.name)
-        # print("Starting:    CLEAN: %d,  DIRTY %d" % (clean, dirty))
 
         actionCount = 0
         for i in range(1300):
@@ -553,7 +553,7 @@ class TestAgents(unittest.TestCase):
 
            clean, dirty = self.getCellStatusCount(agent.getEnv())
            # current implementation maxes out at 49 clean cells, break here
-           if clean >= 49:
+           if dirty == 0:
                break
 
         print("Ending:     CLEAN: %d,  DIRTY %d" % (clean, dirty))
@@ -561,7 +561,7 @@ class TestAgents(unittest.TestCase):
         if debug:
             agent.printEnv()
 
-        self.assertTrue(clean >= 49)
+        self.assertTrue(clean == 100, "Only cleaned %d cells" % clean)
         print("Cleaned %d cells in %d actions\n" % (clean, actionCount))
 
     def test_MemoryAgent_4Room(self):
@@ -585,7 +585,7 @@ class TestAgents(unittest.TestCase):
             actionCount += 1
 
             clean, dirty = self.getCellStatusCount(agent.getEnv())
-            if dirty == 0 or clean > ninety_percent:
+            if dirty == 0: # or clean > ninety_percent:
                 break
 
         print("Ending:     CLEAN: %d,  DIRTY %d" % (clean, dirty))
