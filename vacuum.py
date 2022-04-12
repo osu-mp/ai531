@@ -68,7 +68,8 @@ class VacuumAgent:
         :param env:
         :return:
         """
-        print("Agent: %s" % name)
+        if debug:
+            print("Agent: %s" % name)
         self.name = name
         self.env = env
         self.rowPos = roomSize - 1
@@ -437,7 +438,8 @@ class TestAgents(unittest.TestCase):
 
         ninety_percent = dirty * .9
 
-        print("Starting:    CLEAN: %d,  DIRTY %d" % (clean, dirty))
+        print("AGENT: %s" % agent.name)
+        #print("Starting:    CLEAN: %d,  DIRTY %d" % (clean, dirty))
 
         actionCount = 0
         for i in range(500):
@@ -464,7 +466,8 @@ class TestAgents(unittest.TestCase):
 
         ninety_percent = dirty * .9
 
-        print("Starting:    CLEAN: %d,  DIRTY %d" % (clean, dirty))
+        print("AGENT: %s" % agent.name)
+        # print("Starting:    CLEAN: %d,  DIRTY %d" % (clean, dirty))
 
         actionCount = 0
         for i in range(500):
@@ -496,13 +499,14 @@ class TestAgents(unittest.TestCase):
                 reflex.runAction()
                 clean, dirty = self.getCellStatusCount(env)
                 actionCounter = actionCounter + 1
-            
-            reflex.printEnv()
-            print("CLEAN CELLS: %d " % clean)
+
+            if debug:
+                reflex.printEnv()
+                print("CLEAN CELLS: %d " % clean)
             totalActionCounter.append(actionCounter)
         Avg = sum(totalActionCounter) / len(totalActionCounter)
         print(totalActionCounter)
-        print("Avg of 50 trials: %d " % Avg)
+        print("Avg of 50 trials (single room): %d " % Avg)
 
     def test_random_Agent_4_room(self):
         totalActionCounter = []
@@ -522,13 +526,14 @@ class TestAgents(unittest.TestCase):
                 clean, dirty = self.getCellStatusCount(env)
                 actionCounter = actionCounter + 1
 
-            reflex.printEnv()
-            print("CLEAN CELLS: %d " % clean)
+            if debug:
+                reflex.printEnv()
+                print("CLEAN CELLS: %d " % clean)
             totalActionCounter.append(actionCounter)
         Avg = sum(totalActionCounter) / len(totalActionCounter)
         print(totalActionCounter)
-        print("Avg of 50 trials: %d " % Avg)
-        raise Exception("Avg of 50 trials: %d " % Avg)
+        print("Avg of 50 trials (4 room): %d" % Avg)
+
     def test_MemoryAgent(self):
         """
         Analysis for model based deterministic w/ memory agent
@@ -537,7 +542,9 @@ class TestAgents(unittest.TestCase):
         env = self.getDirtyGrid()
         agent = DeterministicAgentWithMemory(env)
         clean, dirty = self.getCellStatusCount(env)
-        print("Starting:    CLEAN: %d,  DIRTY %d" % (clean, dirty))
+
+        print("AGENT: %s" % agent.name)
+        # print("Starting:    CLEAN: %d,  DIRTY %d" % (clean, dirty))
 
         actionCount = 0
         for i in range(1300):
@@ -569,7 +576,8 @@ class TestAgents(unittest.TestCase):
 
         ninety_percent = dirty * .9
 
-        print("Starting:    CLEAN: %d,  DIRTY %d" % (clean, dirty))
+        print("AGENT: %s" % agent.name)
+        # print("Starting:    CLEAN: %d,  DIRTY %d" % (clean, dirty))
 
         actionCount = 0
         for i in range(1000):
