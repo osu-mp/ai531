@@ -379,7 +379,7 @@ class DeterministicAgentWithMemory(VacuumAgent):
             #return self.turnRight()
 
         if self.currState == 5:
-            self.currState = 0
+            self.currState = 6
             # NOTE: if you return to state 0 (instead of 6) here, the agent can clean
             # 100% of the single room environment. However, by moving to state 6, the
             # agent can clean more of the 4 room case, so it's likely better in a real world env.
