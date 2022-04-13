@@ -76,7 +76,7 @@ class VacuumAgent:
         self.colPos = 0
 
         self.cellState = self.env[self.rowPos][self.colPos]  # saves dirty/clean state of cell
-        self.orientation = orientUp
+        self.orientation = orientRight
         self.env[self.rowPos][self.colPos] = self.orientation
 
         self.num_clean_cells = 0
@@ -192,6 +192,7 @@ class VacuumAgent:
         :return:
         """
         print("Current Environment:")
+        print("Orientation: %s" % self.orientation)
         print(*(' '.join(row) for row in self.env), sep='\n')
         print()
 
@@ -326,7 +327,7 @@ class RandomReflexAgent(VacuumAgent):
 class DeterministicAgentWithMemory(VacuumAgent):
     def __init__(self, env):
         super().__int__("Model-based reflex agent with memory", env)
-        self.turnRight()
+
 
         self.currState = 0
 
@@ -349,6 +350,13 @@ class DeterministicAgentWithMemory(VacuumAgent):
         if self.cellState == floorDirty:
             return self.suckDirt()
         # else cell is clean
+
+        if self.isHome():
+            #print("HOME, state %d" % self.currState)
+            if self.currState != 0:
+                return self.turnRight()
+            #self.printEnv()
+
 
         if self.currState == 0:
             if not self.isWallInFront():
@@ -379,15 +387,23 @@ class DeterministicAgentWithMemory(VacuumAgent):
             #return self.turnRight()
 
         if self.currState == 5:
-            self.currState = 6
+
             # NOTE: if you return to state 0 (instead of 6) here, the agent can clean
             # 100% of the single room environment. However, by moving to state 6, the
             # agent can clean more of the 4 room case, so it's likely better in a real world env.
+            self.currState = 6
             return self.turnRight()
 
         if self.currState == 6:
-            self.currState = 0
+            if self.isWallInFront():
+                self.currState = 0
+                return self.turnLeft()
+            self.currState = 7
             return self.turnRight()
+
+        if self.currState == 7:
+            self.currState = 0
+            return self.turnLeft()
 
         # should not get here
         raise Exception("Agent should have picked an action before getting here")
@@ -561,8 +577,9 @@ class TestAgents(unittest.TestCase):
         if debug:
             agent.printEnv()
 
-        self.assertTrue(clean == 100, "Only cleaned %d cells" % clean)
         print("Cleaned %d cells in %d actions\n" % (clean, actionCount))
+
+        self.assertTrue(clean == 100, "Only cleaned %d cells" % clean)
 
     def test_MemoryAgent_4Room(self):
         """
@@ -580,7 +597,7 @@ class TestAgents(unittest.TestCase):
         # print("Starting:    CLEAN: %d,  DIRTY %d" % (clean, dirty))
 
         actionCount = 0
-        for i in range(1000):
+        for i in range(300):
             agent.runAction()
             actionCount += 1
 
@@ -593,8 +610,9 @@ class TestAgents(unittest.TestCase):
         if debug:
             agent.printEnv()
 
-        self.assertTrue(clean > ninety_percent)
         print("Cleaned %d of %d cells in %d actions\n" % (clean, starting_dirty, actionCount))
+
+        self.assertTrue(clean > ninety_percent)
 
 
 if __name__ == '__main__':
