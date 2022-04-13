@@ -357,6 +357,7 @@ class DeterministicAgentWithMemory(VacuumAgent):
                 return self.turnRight()
             #self.printEnv()
 
+        # our 3 bits of memory are used to represent each state respectively (0/1)
 
         if self.currState == 0:
             if not self.isWallInFront():
@@ -563,7 +564,7 @@ class TestAgents(unittest.TestCase):
         print("AGENT: %s" % agent.name)
 
         actionCount = 0
-        for i in range(1300):
+        for i in range(225):
            agent.runAction()
            actionCount += 1
 
@@ -595,7 +596,7 @@ class TestAgents(unittest.TestCase):
         # print("Starting:    CLEAN: %d,  DIRTY %d" % (clean, dirty))
 
         actionCount = 0
-        for i in range(300):
+        for i in range(225):
             agent.runAction()
             actionCount += 1
 
@@ -609,7 +610,6 @@ class TestAgents(unittest.TestCase):
             agent.printEnv()
 
         print("Cleaned %d of %d cells in %d actions\n" % (clean, starting_dirty, actionCount))
-
         # self.assertTrue(clean > ninety_percent)
 
 
