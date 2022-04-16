@@ -54,12 +54,205 @@ To study how the amount of search varies with the problem difficulty, we will ge
 For each m, plot the average time consumed, nodes searched, and the optimal solution lengths for the 2 algorithms and the 2 heuristics. You might find that your algorithm is taking too long for some inputs and heuristics. Bound the time and/or the number of nodes searched to a maximum and report what fraction of the problems are solved in that bound. Report the other statistics on the solved problems.
 """
 
+emptySquare = '_'
+puzzleSize = 4              # number of rows and cols for puzzle (4 means 4x4 grid with 15 numbers and one emtpy cell)
+
+class Puzzle:
+    def __init__(self):
+        self.puzzleSize = puzzleSize
+        self.puzzle = self.getSolvedPuzzle()
+
+    def getSolvedPuzzle(self):
+        """
+        Build and return an ordered grid of puzzleSize x puzzleSize (last cell is empty)
+        For a 4x4 grid, it should look like:
+        [1,   2,  3,  4],
+        [5,   6,  7,  8],
+        [9,  10, 11, 12],
+        [13, 14, 15, emptySquare]
+        :return:
+        """
+        puzzle = []
+        for row in range(puzzleSize):
+            line = []
+            for col in range(puzzleSize):
+                line.append(row * puzzleSize + col + 1)         # add 1 to start tiles at 1 instead of 0
+            puzzle.append(line)
+
+        # set the last sqaure to blank
+        puzzle[puzzleSize - 1][puzzleSize - 1] = emptySquare
+        return puzzle
+
+    def isPuzzleSolved(self):
+        return self.puzzle == self.getSolvedPuzzle()
+
+    def scramblePuzzle(self, m):
+        """
+        Scramble the current puzzle by moving m random tiles
+        :param m: Number of moves to scramble puzzle
+        :return: Nothing (self.puzzle is now scrambled)
+        """
+        last = self.getEmptyPosition()
+        for i in range(m):
+            self.moveEmpty
+
+    def getPosition(self, target):
+        """
+        Return the row and col of the target number (or empty cell)
+        :param target:
+        :return:
+        """
+        for row in range(puzzleSize):
+            for col in range(puzzleSize):
+                if self.puzzle[row][col] == target:
+                    return(row, col)
+
+    def getEmptyPosition(self):
+        """
+        Return the row and col where the empty square is
+        :return:
+        """
+        return self.getPosition(emptySquare)
+
+    def getNeighbors(self, target):
+        """
+        Return neighbors of the given target (numbers that it can swap with)
+        :param target:
+        :return:
+        """
+        row, col = self.getPosition(target)
+
+        neighbors = []
+        # up
+        if row > 0:
+            neighbors.append(self.puzzle[row - 1][col])
+        # left
+        if col > 0:
+            neighbors.append(self.puzzle[row][col - 1])\
+        # right
+        if col < puzzleSize - 1:
+            neighbors.append(self.puzzle[row][col + 1])
+        # down
+        if row < puzzleSize - 1:
+            neighbors.append(self.puzzle[row + 1][col])
+
+        return neighbors
+
+    def moveToEmptyCell(self, target):
+        """
+        Move the given number into the empty cell
+        :param target:
+        :return: True if moved, Exception if blocked
+        """
+        neighbors = self.getNeighbors(target)
+        if emptySquare not in neighbors:
+            raise Exception("Target number %d is not adjacent to empty cell, cannot move")
+
+        # if they are neighbors, swap the positions
+        tarRow, tarCol = self.getPosition(target)       # position of target number that is moving
+        empRow, empCol = self.getEmptyPosition()        # position of empty cell
+
+        self.puzzle[tarRow][tarCol] = emptySquare
+        self.puzzle[empRow][empCol] = target
+
+        return True
 
 class TestPuzzle(unittest.TestCase):
 
-    def test_puzzle(self):
-        print("TODO Test")
+    def TODO_test_scramble(self):
+        puzzle = Puzzle()
+        solved = puzzle.getSolvedPuzzle()
+        puzzle.scramblePuzzle(5)
+        self.assertNotEqual(solved, scrambled)
 
+    def test_getPosition(self):
+        """
+        Tests for getPosition
+        :return:
+        """
+        puzzle = Puzzle()
+        target = 1
+        exp = (0, 0)
+        self.assertEqual(exp, puzzle.getPosition(target))
+
+    def test_getEmptyPosition(self):
+        """
+        Test the get empty position function.
+        For a solved puzzle, it should be in the final cell (row = puzzleSize - 1, col = puzzleSize - 1)
+        FOr a 4x4 grid, this will be in position 3,3
+        :return:
+        """
+        puzzle = Puzzle()
+        row, col = puzzle.getEmptyPosition()
+        self.assertEqual(3, row)
+        self.assertEqual(3, col)
+
+    def test_getNeighbors(self):
+        """
+        Test the getNeighbors function in various positions.
+        Use the solved puzzle (below) as a reference
+        1  2  3  4
+        5  6  7  8
+        9  10 11 12
+        13 14 15 _
+        :return:
+        """
+        puzzle = Puzzle()
+
+        # top left (only 2 neighbors)
+        target = 1
+        exp = [2, 5]
+        self.assertEqual(exp, puzzle.getNeighbors(target))
+
+        # top right (only 2 neighbors)
+        target = 4
+        exp = [3, 8]
+        self.assertEqual(exp, puzzle.getNeighbors(target))
+
+        # middle number (4 neighbors)
+        target = 7
+        exp = [3, 6, 8, 11]
+        self.assertEqual(exp, puzzle.getNeighbors(target))
+
+        # bottom left (2 neighbors)
+        target = 13
+        exp = [9, 14]
+        self.assertEqual(exp, puzzle.getNeighbors(target))
+
+        # middle bottom (3 neighbors)
+        target = 14
+        exp = [10, 13, 15]
+        self.assertEqual(exp, puzzle.getNeighbors(target))
+
+        # bottom left (2 neighbors)
+        target = emptySquare
+        exp = [12, 15]
+        self.assertEqual(exp, puzzle.getNeighbors(target))
+
+    def test_moveToEmptyCell(self):
+        """
+        Verify the move command works as expected. Start with solved puzzle:
+        1  2  3  4
+        5  6  7  8
+        9  10 11 12
+        13 14 15 _
+        :return:
+        """
+        puzzle = Puzzle()
+
+        # try to move number 1 (it is not adjacent to empty cell so exception expected)
+        self.assertRaises(Exception, puzzle.moveToEmptyCell, 1)
+
+        # move 12 to empty cell (adjacent so valid)
+        puzzle.moveToEmptyCell(12)
+
+        """ Current configuration
+        1  2  3  4
+        5  6  7  8
+        9  10 11 _
+        13 14 15 12        
+        """
+        puzzle.moveToEmptyCell(11)
 
 if __name__ == '__main__':
     unittest.main()
