@@ -16,6 +16,8 @@ Heuristic: MY: Any other heuristic (>= CB) that you can come up with that perfor
 Helpers:
 scramble(goal, m): given a valid board, scramble by m moves (watch out for moves that cancel each other out, e.g. up followed by down)
 timer: time how long a function takes
+correctCount: return how many numbers are in their correct cell
+distanceFromEmpty: return 
 
 Searches:
 generic:    count number of nodes searched? 
@@ -23,6 +25,9 @@ generic:    count number of nodes searched?
             set some max time threshold?
 aStar:
 RBFS
+
+Min Heap walkthrough: https://www.geeksforgeeks.org/min-heap-in-python/
+A* algo 
 
 """
 
@@ -62,6 +67,18 @@ class Puzzle:
         self.puzzleSize = puzzleSize
         self.puzzle = self.getSolvedPuzzle()
 
+    def graphPuzzle(self):
+        """
+
+        :return:
+        """
+        '''
+        16 nodes: e.g. 1 connected to 2 and 5, 
+        
+        Use heap: 
+        '''
+        pass
+
     def getSolvedPuzzle(self):
         """
         Build and return an ordered grid of puzzleSize x puzzleSize (last cell is empty)
@@ -94,7 +111,12 @@ class Puzzle:
         """
         last = self.getEmptyPosition()
         for i in range(m):
-            self.moveEmpty
+            # get neighbors of empty cell
+            # pick a random number from those
+            # as long as it is not 'last' move it
+            pass
+
+        raise Exception('not done')
 
     def getPosition(self, target):
         """
@@ -128,7 +150,7 @@ class Puzzle:
             neighbors.append(self.puzzle[row - 1][col])
         # left
         if col > 0:
-            neighbors.append(self.puzzle[row][col - 1])\
+            neighbors.append(self.puzzle[row][col - 1])
         # right
         if col < puzzleSize - 1:
             neighbors.append(self.puzzle[row][col + 1])
@@ -156,6 +178,35 @@ class Puzzle:
         self.puzzle[empRow][empCol] = target
 
         return True
+
+    def cityBlock(self):
+        """
+        City block heuristic: estimate number of cells
+        :return:
+        """
+        raise Exception('TODO: Joe')
+
+    def myHeuristic(self):
+        """
+        TBD heuristic defined by us
+        :return:
+        """
+        raise Exception('TODO: Joe')
+
+    def aStar(self, whichHeuristic):
+        """
+        A* search
+        :return:
+        """
+        raise Exception('TODO: Wadood & Joe')
+
+    def rbfs(self, whichHeuristic):
+        """
+        Recursive best first search
+        :return:
+        """
+        raise Exception('TODO: Matthew')
+
 
 class TestPuzzle(unittest.TestCase):
 
