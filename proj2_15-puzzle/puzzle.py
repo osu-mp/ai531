@@ -245,14 +245,35 @@ class TestPuzzle(unittest.TestCase):
 
         # move 12 to empty cell (adjacent so valid)
         puzzle.moveToEmptyCell(12)
-
         """ Current configuration
         1  2  3  4
         5  6  7  8
         9  10 11 _
         13 14 15 12        
         """
+
         puzzle.moveToEmptyCell(11)
+        """ Current configuration
+        1  2  3  4
+        5  6  7  8
+        9  10 _  11
+        13 14 15 12        
+        """
+
+        puzzle.moveToEmptyCell(7)
+        """ Current configuration
+        1  2  3  4
+        5  6  _  8
+        9  10 7  11
+        13 14 15 12        
+        """
+        expected = [
+            [1,   2, 3,           4],
+            [5,   6, emptySquare, 8],
+            [9,  10, 7,          11],
+            [13, 14, 15,         12]
+        ]
+        self.assertEqual(puzzle.puzzle, expected)
 
 if __name__ == '__main__':
     unittest.main()
