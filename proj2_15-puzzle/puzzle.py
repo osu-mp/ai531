@@ -109,14 +109,40 @@ class Puzzle:
         :param m: Number of moves to scramble puzzle
         :return: Nothing (self.puzzle is now scrambled)
         """
-        last = self.getEmptyPosition()
+        lastMoved = None
         for i in range(m):
             # get neighbors of empty cell
-            # pick a random number from those
-            # as long as it is not 'last' move it
-            pass
+            neighbors = self.getNeighbors(emptySquare)
 
-        raise Exception('not done')
+            # pick a random number from those
+            next = random.choice(neighbors)
+
+            # as long as it is not 'last' move it
+            while next == lastMoved:
+                next = random.choice(neighbors)
+
+            self.moveToEmptyCell(next)
+            print("Scramble: moved %d to empty cell" % next)
+            lastMoved = next
+
+        #raise Exception('not done')
+
+    def print(self):
+        """
+        Print the current configuration
+        :return:
+        """
+        str = ""
+        for row in self.puzzle:
+            for col in row:
+                if col == emptySquare:
+                    str += "   "
+                else:
+                    str += "%2d " % col
+            str += "\n"
+        print(str)
+
+
 
     def getPosition(self, target):
         """
@@ -210,11 +236,12 @@ class Puzzle:
 
 class TestPuzzle(unittest.TestCase):
 
-    def TODO_test_scramble(self):
+    def test_scramble(self):
         puzzle = Puzzle()
         solved = puzzle.getSolvedPuzzle()
-        puzzle.scramblePuzzle(5)
-        self.assertNotEqual(solved, scrambled)
+        puzzle.scramblePuzzle(10)
+        self.assertNotEqual(solved, puzzle.puzzle)
+        puzzle.print()
 
     def test_getPosition(self):
         """
