@@ -231,6 +231,38 @@ class Puzzle:
         Recursive best first search
         :return:
         """
+        solution = self.rbfsMain(self.puzzle, node, float('inf'), whichHeuristic)
+        raise Exception('TODO: Matthew')
+
+    def rbfsMain(self, puzzle, node, fLimit, whichHeuristic):
+        """
+
+        :param puzzle:
+        :param node:
+        :param fLimit:
+        :param whichHeuristic:
+        :return:
+        """
+        # see page 93 in book
+        if self.isPuzzleSolved():
+            return node
+
+        sucessors = node.expand()
+        if not sucessors:
+            return (False, float('inf')
+
+        for successor in sucessors:
+            sf = max(sp - cost + whichHeuristic(s), node.f))
+
+        while True:
+            best = successor node with lowest f-value
+            if best.f > fLimit:
+                return (False, best.f)
+            alternative = second lowest successor node
+            result, best.f = self.rbfsMain(puzzle, best, min(fLimit, alternative))
+            if result != False:
+                return (result, best.f)
+
         raise Exception('TODO: Matthew')
 
 
