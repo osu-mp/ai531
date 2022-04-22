@@ -1,2 +1,4 @@
-# ai531-vacuum-agents
-Vacuum agents for AI 531 Project 1
+# ai531-group
+Group Projects for AI 531:
+1 - Various Vacuum agents 
+2 - 15 Puzzle solver using aStar and rbfs search
