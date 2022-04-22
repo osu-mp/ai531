@@ -248,6 +248,8 @@ class Puzzle:
         Heuristic defined by us
         Use the city block estimate plus the distance to the empty square
         This is not admissible since it may over-estimate the number of moves
+        -i.e. if the give tile is one move away from its intended location and the emtpy square
+        is there, it only needs to move once (but this algo returns 2 for that tile)
         :return:
         """
         sum = 0
