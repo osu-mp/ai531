@@ -66,7 +66,7 @@ puzzleSize = 4              # number of rows and cols for puzzle (4 means 4x4 gr
 collectData = False         # set to True to generate test data (long runtime)
 maxNodes = 1000             # TODO tune to a sensible value
 csvFilename = 'data.csv'    # where test runtimes are written
-
+debug = False               # prints debug messages when enabled
 class Puzzle:
     def __init__(self):
         self.puzzleSize = puzzleSize
@@ -127,7 +127,8 @@ class Puzzle:
                 next = random.choice(neighbors)
 
             self.moveToEmptyCell(next)
-            print("Scramble: moved %d to empty cell" % next)
+            if debug:
+                print("Scramble: moved %d to empty cell" % next)
             lastMoved = next
 
         # return a copy for data collection (allows to use same scrambled puzzle for different configs)
@@ -161,6 +162,7 @@ class Puzzle:
             for col in range(puzzleSize):
                 if self.puzzle[row][col] == target:
                     return(row, col)
+
 
     def getEmptyPosition(self):
         """
@@ -214,12 +216,30 @@ class Puzzle:
 
     def cityBlock(self):
         """
-        City block heuristic: estimate number of cells
+        City block heuristic: estimate number of moves for each tile to intended location
+        This is admissible since it never over-estimates the number of moves
         :return:
         """
-        print('This is the cityBlock heuristic')
-        return 8
-        # raise Exception('TODO: Joe')
+        # for each tile, count the number of moves to its intended position (assume no other tiles)
+        sum = 0
+        for row in range(puzzleSize):
+            line = []
+            for col in range(puzzleSize):
+                # expected tile position (+1 because arrays start at 0, tiles start at 1)
+                expectedTile = row * puzzleSize + col + 1
+
+                # the last spot in the board is reserved for empty space, ignore for this heuristic
+                if expectedTile == (puzzleSize * puzzleSize):
+                    continue
+
+                # get location of expected tile and calculate distance (absolute in case it moves up/left)
+                actRow, actCol = self.getPosition(expectedTile)
+                dist = abs(actRow - row) + abs(actCol - col)
+                if debug:
+                    print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
+                sum += dist
+
+        return sum
 
     def myHeuristic(self):
         """
@@ -454,6 +474,30 @@ class TestPuzzle(unittest.TestCase):
                         (nodesChecked, runTime) = trial
                         writer.writerow([mValue, puzzleNum, algo, heuristic, nodesChecked, runTime])
         print('Data collection complete, results written to: %s' % csvFilename)
+
+    def test_cityBlock(self):
+        """
+        Unit tests for city block heuristic
+        :return:
+        """
+        puzzle = Puzzle()
+
+        # base case: solved puzzle, city block should return 0
+        self.assertEqual(0, puzzle.cityBlock())
+
+        scrambled = [
+            [4,   1, 3,           2],
+            [5,   6, emptySquare, 8],
+            [10,  9, 7,          11],
+            [15, 14, 13,         12]
+        ]
+
+        puzzle.puzzle = scrambled
+
+        # using above puzzle, expected city block is (tiles 1 through 15 distances added):
+        # e.g. tile 1 is 1 spot away, tile 2 is 2, tile 3 is where it belongs, etc
+        expected = 1 + 2 + 0 + 3 + 0 + 0 + 1 + 0 + 1 + 1 + 1 + 1 + 2 + 0 + 2
+        self.assertEqual(expected, puzzle.cityBlock())
 
 if __name__ == '__main__':
     unittest.main()
