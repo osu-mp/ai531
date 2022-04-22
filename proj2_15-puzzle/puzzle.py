@@ -5,7 +5,9 @@
 # Joe Nguyen
 # Matthew Pacey
 
+import csv
 import random
+import time
 import unittest
 
 """
@@ -61,6 +63,9 @@ For each m, plot the average time consumed, nodes searched, and the optimal solu
 
 emptySquare = '_'
 puzzleSize = 4              # number of rows and cols for puzzle (4 means 4x4 grid with 15 numbers and one emtpy cell)
+collectData = False         # set to True to generate test data (long runtime)
+maxNodes = 1000             # TODO tune to a sensible value
+csvFilename = 'data.csv'    # where test runtimes are written
 
 class Puzzle:
     def __init__(self):
@@ -125,7 +130,8 @@ class Puzzle:
             print("Scramble: moved %d to empty cell" % next)
             lastMoved = next
 
-        #raise Exception('not done')
+        # return a copy for data collection (allows to use same scrambled puzzle for different configs)
+        return self.puzzle.copy()
 
     def print(self):
         """
@@ -150,6 +156,7 @@ class Puzzle:
         :param target:
         :return:
         """
+        # TODO does using modulo or caching significantly help?
         for row in range(puzzleSize):
             for col in range(puzzleSize):
                 if self.puzzle[row][col] == target:
@@ -210,28 +217,42 @@ class Puzzle:
         City block heuristic: estimate number of cells
         :return:
         """
-        raise Exception('TODO: Joe')
+        print('This is the cityBlock heuristic')
+        return 8
+        # raise Exception('TODO: Joe')
 
     def myHeuristic(self):
         """
         TBD heuristic defined by us
         :return:
         """
-        raise Exception('TODO: Joe')
+        print('This is my heuristic')
+        return 9
+        # raise Exception('TODO: Joe')
 
-    def aStar(self, whichHeuristic):
+    def aStar(self, whichHeuristic, maxNodes=1000):
         """
         A* search
-        :return:
+        :return: Number of nodes checked
         """
-        raise Exception('TODO: Wadood & Joe')
+        estimate = whichHeuristic()
+        print('astar search with %s (estimate %d)' % (whichHeuristic.__name__, estimate))
+        time.sleep(1)
+        #raise Exception('TODO: Wadood & Joe')
+        nodesChecked = 10
+        return nodesChecked
 
-    def rbfs(self, whichHeuristic):
+    def rbfs(self, whichHeuristic, maxNodes=1000):
         """
         Recursive best first search
-        :return:
+        :return: Number of nodes checked
         """
-        raise Exception('TODO: Matthew')
+        estimate = whichHeuristic()
+        print('rbfs search with %s (estimate %d)' % (whichHeuristic.__name__, estimate))
+        time.sleep(2)
+        #raise Exception('TODO: Matthew')
+        nodesChecked = 20
+        return nodesChecked
 
 
 class TestPuzzle(unittest.TestCase):
@@ -352,6 +373,65 @@ class TestPuzzle(unittest.TestCase):
             [13, 14, 15,         12]
         ]
         self.assertEqual(puzzle.puzzle, expected)
+
+    def runTest(self, puzzleObj, searchFunc, heuristic):
+        """
+        Run the specified search function using given heuristic and return runtime in seconds
+        :param puzzle:
+        :param searchFunc:
+        :param heuristic:
+        :return:
+        """
+        start = time.time()                             # get start time
+        nodesChecked = searchFunc(heuristic)            # run the search function with selected heuristic
+        end = time.time()                               # record runtime
+
+        return (nodesChecked, end - start)              # return number of nodes checked and runtime
+
+    def test_data_collection(self):
+        """
+        Try all combinations of searches and collect performance data into a csv
+        :return:
+        """
+        if not collectData:
+            self.skipTest("Data collection skipped")
+
+        # TODO save to csv
+        csvFH = open(csvFilename, 'w', newline='')
+        writer = csv.writer(csvFH)
+        writer.writerow(['m', 'searchFunc', 'heuristic', 'nodesChecked', 'runTime (seconds)'])
+
+        puzzle = Puzzle()
+        for m in [10, 20, 30, 40, 50]:                      # run for increasing number of moves from solved puzzle
+            for n in range(10):                             # run 10 trials at each m
+                base = Puzzle()
+                basePuzzle = base.scramblePuzzle(m)         # ensure all 4 configurations use the same scrambled puzzle
+
+                # astar with city block heuristic
+                test = Puzzle()
+                test.puzzle = basePuzzle
+                (nodesChecked, runTime) = self.runTest(test, puzzle.aStar, puzzle.cityBlock)
+                writer.writerow([m, 'astar', 'cityBlock', nodesChecked, runTime])
+
+                # astar with my heuristic
+                test = Puzzle()
+                test.puzzle = basePuzzle
+                (nodesChecked, runTime) = self.runTest(test, puzzle.aStar, puzzle.myHeuristic)
+                writer.writerow([m, 'astar', 'myHeuristic', nodesChecked, runTime])
+
+                # rbfs with city block heuristic
+                test = Puzzle()
+                test.puzzle = basePuzzle
+                (nodesChecked, runTime) = self.runTest(basePuzzle, puzzle.rbfs, puzzle.cityBlock)
+                writer.writerow([m, 'rbfs', 'cityBlock', nodesChecked, runTime])
+
+                # rbfs with my heuristic
+                test = Puzzle()
+                test.puzzle = basePuzzle
+                (nodesChecked, runTime) = self.runTest(basePuzzle, puzzle.rbfs, puzzle.myHeuristic)
+                writer.writerow([m, 'rbfs', 'myHeuristic', nodesChecked, runTime])
+
+        print('Data collection complete, results written to: %s' % csvFilename)
 
 if __name__ == '__main__':
     unittest.main()
