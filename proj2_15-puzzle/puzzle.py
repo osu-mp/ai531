@@ -399,38 +399,60 @@ class TestPuzzle(unittest.TestCase):
         # TODO save to csv
         csvFH = open(csvFilename, 'w', newline='')
         writer = csv.writer(csvFH)
-        writer.writerow(['m', 'searchFunc', 'heuristic', 'nodesChecked', 'runTime (seconds)'])
+        writer.writerow(['m', 'puzzleNum', 'searchFunc', 'heuristic', 'nodesChecked', 'runTime (seconds)'])
+
+        # collect data into run data and write it later
+        runData = {}
+        for algo in ['astar', 'rbfs']:
+            runData[algo] = {}
+            for heuristic in ['cityBlock', 'myHeuristic']:
+                runData[algo][heuristic] = {}
 
         puzzle = Puzzle()
         for m in [10, 20, 30, 40, 50]:                      # run for increasing number of moves from solved puzzle
+
+            runData['astar']['cityBlock'][m] = []
+            runData['astar']['myHeuristic'][m] = []
+            runData['rbfs']['cityBlock'][m] = []
+            runData['rbfs']['myHeuristic'][m] = []
+
             for n in range(10):                             # run 10 trials at each m
                 base = Puzzle()
                 basePuzzle = base.scramblePuzzle(m)         # ensure all 4 configurations use the same scrambled puzzle
+                print('Puzzle Number %d' % n)
+                print(base.print())
 
                 # astar with city block heuristic
                 test = Puzzle()
                 test.puzzle = basePuzzle
                 (nodesChecked, runTime) = self.runTest(test, puzzle.aStar, puzzle.cityBlock)
-                writer.writerow([m, 'astar', 'cityBlock', nodesChecked, runTime])
+                runData['astar']['cityBlock'][m].append([nodesChecked, runTime])
 
                 # astar with my heuristic
                 test = Puzzle()
                 test.puzzle = basePuzzle
                 (nodesChecked, runTime) = self.runTest(test, puzzle.aStar, puzzle.myHeuristic)
-                writer.writerow([m, 'astar', 'myHeuristic', nodesChecked, runTime])
+                runData['astar']['myHeuristic'][m].append([nodesChecked, runTime])
 
                 # rbfs with city block heuristic
                 test = Puzzle()
                 test.puzzle = basePuzzle
                 (nodesChecked, runTime) = self.runTest(basePuzzle, puzzle.rbfs, puzzle.cityBlock)
-                writer.writerow([m, 'rbfs', 'cityBlock', nodesChecked, runTime])
+                runData['rbfs']['cityBlock'][m].append([nodesChecked, runTime])
 
                 # rbfs with my heuristic
                 test = Puzzle()
                 test.puzzle = basePuzzle
                 (nodesChecked, runTime) = self.runTest(basePuzzle, puzzle.rbfs, puzzle.myHeuristic)
-                writer.writerow([m, 'rbfs', 'myHeuristic', nodesChecked, runTime])
+                runData['rbfs']['myHeuristic'][m].append([nodesChecked, runTime])
 
+        # now that all data has been collected, write it grouped by algo/heuristic
+        for algo in runData:
+            for heuristic in runData[algo]:
+                for mValue in runData[algo][heuristic]:
+                    for puzzleNum, trial in enumerate(runData[algo][heuristic][m]):
+                        (nodesChecked, runTime) = trial
+                        writer.writerow([mValue, puzzleNum, algo, heuristic, nodesChecked, runTime])
         print('Data collection complete, results written to: %s' % csvFilename)
 
 if __name__ == '__main__':
