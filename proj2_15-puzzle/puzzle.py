@@ -12,6 +12,8 @@ import time
 import unittest
 
 from queue import PriorityQueue
+from sys import maxsize
+
 """
 TODO: Define classes/tests
 Heuristic: City Block
@@ -68,7 +70,7 @@ puzzleSize = 4              # number of rows and cols for puzzle (4 means 4x4 gr
 collectData = False         # set to True to generate test data (long runtime)
 maxNodes = 1000             # TODO tune to a sensible value
 csvFilename = 'data.csv'    # where test runtimes are written
-debug = False               # prints debug messages when enabled
+debug = True               # prints debug messages when enabled
 
 class Puzzle:
     def __init__(self):
@@ -256,11 +258,13 @@ class Puzzle:
                 # get location of expected tile and calculate distance (absolute in case it moves up/left)
                 actRow, actCol = self.getPosition(expectedTile, puzzle)
                 dist = abs(actRow - row) + abs(actCol - col)
-                if debug:
-                    print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
+                #if debug:
+                #    print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
 
                 sum += dist
 
+        if debug:
+            print('\tcityBlock estimate: %d' % sum)
         return sum
 
     def myHeuristic(self, puzzle=None):
@@ -305,7 +309,6 @@ class Puzzle:
 
         return sum
 
-    def aStar(self, puzzle, whichHeuristic, maxNodes=1000):
         """
         A* search
         :return: Number of nodes checked
@@ -322,11 +325,13 @@ class Puzzle:
         Recursive best first search
         :return: Number of nodes checked
         """
+        self.checkedIds = {}
+        self.maxNodes = maxNodes
         print('rbfs for %s' % puzzle)#self.print(puzzle))
-        (solution, fValue) = self.rbfsMain(puzzle, float('inf'), whichHeuristic, 0)
+        (solution, fValue) = self.rbfsMain(puzzle, maxsize, whichHeuristic, 0)
         print('\tsoln %s\n\tmoves %d' % (solution, fValue))
-        # return (solution, fValue)
-        return fValue
+        return (solution, fValue)
+        # return fValue
 
     def rbfsMain(self, node, fLimit, whichHeuristic, nodeCount):
         """
@@ -337,35 +342,57 @@ class Puzzle:
         :param whichHeuristic:
         :return:
         """
+        if debug:
+            print('rbfsMain: fLimit = %f, count = %d' % (fLimit, nodeCount))
+            print('\tnode=%s' % node)
+        if nodeCount > self.maxNodes:
+            raise Exception('Max node count exceeded')
         # see page 93 in book
         if self.isPuzzleSolved(node):
-            # raise Exception('solved')
+            #raise Exception('solved')
+            if debug:
+                print('Solved1: nodeCount = %d' % nodeCount)
+                print('\tsoln %s' % node)
             return node, nodeCount
 
         successorNodes = self.generateNodes(node)
         if not successorNodes:
-            return (False, float('inf'))
+            return (None, maxsize)
 
         q = SuccessorQueue()
         for successorNode in successorNodes:
             if self.isPuzzleSolved(successorNode):
                 # raise Exception('blah %d' % nodeCount + 1)
+                if debug:
+                    print('Solved2: nodeCount = %d' % nodeCount)
+                    print('\tsoln %s' % node)
                 return successorNode, nodeCount + 1
             estimate = max(nodeCount + whichHeuristic(successorNode), nodeCount)
             id = self.getPuzzleId(successorNode)
+
+            #if id not in self.checkedIds:
             q.put((estimate, id, successorNode))
+            #    self.checkedIds[id] = 1
 
         while True:
             (bestF, id, bestNode) = q.get()
             if bestF > fLimit:
-                return False, bestF
+                return None, bestF
 
             (altF, id, altNode) = q.get()
             nextF = min(fLimit, altF)
             nodeCount += len(successorNodes)
             result, bestF = self.rbfsMain(bestNode, nextF, whichHeuristic, nodeCount + 1)
             if result:
+                if debug:
+                    print('Solved3: nodeCount = %d' % nodeCount)
+                    print('\tsoln %s' % node)
+
                 return result, bestF
+
+            a = 1
+            print('blah')
+            #raise Exception('matt')
 
     def generateNodes(self, puzzle=None):
         """
@@ -633,34 +660,44 @@ class TestPuzzle(unittest.TestCase):
         ]
         self.assertEqual(nodes, [expectedNodeUp, expectedNodeLeft])
 
-    def test_rbfs(self):
+    def test_rbfs_base(self):
         """
-        Functional tests for rbfs search algo
+        Functional tests for rbfs search algo with solved puzzle as initial state
         :return:
         """
         puzzle = Puzzle()
-        solvedPuzzle = puzzle.getSolvedPuzzle()
-        # (result, nodeCount) = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock)
-        # self.assertTrue(result != None)
+        (result, nodeCount) = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock)
+        self.assertTrue(result != None)
+        self.assertEqual(0, nodeCount)
 
-        # puzzle.moveToEmptyCell(12)
-        # (result, nodeCount) = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock)
-        # self.assertTrue(puzzle.isPuzzleSolved(result))
-        # self.assertEqual(1, nodeCount)
-
-
+    def test_rbfs_simple(self):
+        """
+        Functional tests for rbfs search algo with simple (low m) scrambled initial state
+        :return:
+        """
         puzzle = Puzzle()
         puzzle.moveToEmptyCell(12)
-        puzzle.moveToEmptyCell(8)
-        nodeCount = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock)
-        #self.assertTrue(puzzle.isPuzzleSolved(result))
-        self.assertEqual(5, nodeCount)
+        (result, nodeCount) = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock)
+        self.assertTrue(puzzle.isPuzzleSolved(result))
+        self.assertEqual(1, nodeCount)
 
+
+    def test_rbfs_complex(self):
+        """
+        Functional test for rbfs with complex (high m) scrambled initial state
+        :return:
+        """
         puzzle = Puzzle()
-        puzzle.scramblePuzzle(2)        # TODO: only handles 2 but nothing greater, why?
-        nodeCount = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock)
-        #self.assertTrue(puzzle.isPuzzleSolved(result))
+        puzzle.scramblePuzzle(4)        # TODO: only handles 2 but nothing greater, why?
+        (result, nodeCount) = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock)
+        self.assertTrue(puzzle.isPuzzleSolved(result))
         self.assertTrue(nodeCount < 100)
+
+    def test_rbfs(self):
+        # run simple test for now
+        # self.test_rbfs_base()
+        # self.test_rbfs_simple()
+        self.test_rbfs_complex()
 
     def test_cityBlock(self):
         """
