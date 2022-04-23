@@ -1,4 +1,4 @@
-#!/us#!/usr/bin/python3
+#!/usr/bin/python3
 
 # AI 531 - Project 2 - 15 Puzzle
 # Wadood Alam
@@ -263,8 +263,8 @@ class Puzzle:
 
                 sum += dist
 
-        if debug:
-            print('\tcityBlock estimate: %d' % sum)
+        # if debug:
+        #     print('\tcityBlock estimate: %d' % sum)
         return sum
 
     def myHeuristic(self, puzzle=None):
@@ -325,17 +325,21 @@ class Puzzle:
         Recursive best first search
         :return: Number of nodes checked
         """
-        self.checkedIds = {}
         self.maxNodes = maxNodes
+        self.frontier = SuccessorQueue()
+
         print('rbfs for %s' % puzzle)#self.print(puzzle))
         (solution, fValue) = self.rbfsMain(puzzle, maxsize, whichHeuristic, 0)
-        print('\tsoln %s\n\tmoves %d' % (solution, fValue))
+        if solution:
+            print('\tsoln %s\n\tmoves %d' % (solution, fValue))
+        else:
+            print('\tNo solution found in %d moves' % fValue)
         return (solution, fValue)
         # return fValue
 
     def rbfsMain(self, node, fLimit, whichHeuristic, nodeCount):
         """
-
+        see page 93 in book
         :param puzzle:
         :param node:
         :param fLimit:
@@ -343,55 +347,74 @@ class Puzzle:
         :return:
         """
         if debug:
-            print('rbfsMain: fLimit = %f, count = %d' % (fLimit, nodeCount))
+            print('\n')
+            print('rbfsMain: fLimit = %d, count = %d' % (fLimit, nodeCount))
             print('\tnode=%s' % node)
+
+        # max nodes are checked, exit
         if nodeCount > self.maxNodes:
-            raise Exception('Max node count exceeded')
-        # see page 93 in book
+            print('Max node depth exceeded (%d > %d)' % (nodeCount, self.maxNodes))
+            return (None, maxsize)
+
+        # if puzzle is solved, exit
         if self.isPuzzleSolved(node):
-            #raise Exception('solved')
             if debug:
                 print('Solved1: nodeCount = %d' % nodeCount)
-                print('\tsoln %s' % node)
-            return node, nodeCount
+                print('\tsoln1 %s' % node)
+            return (node, nodeCount)
 
+        nodeCount -= 1
+
+        # generate child nodes off parent (2-4 places the empty tile can move)
         successorNodes = self.generateNodes(node)
+        # if no child nodes generated, return
         if not successorNodes:
             return (None, maxsize)
 
-        q = SuccessorQueue()
+        # add the child nodes to the frontier
         for successorNode in successorNodes:
-            if self.isPuzzleSolved(successorNode):
-                # raise Exception('blah %d' % nodeCount + 1)
-                if debug:
-                    print('Solved2: nodeCount = %d' % nodeCount)
-                    print('\tsoln %s' % node)
-                return successorNode, nodeCount + 1
+            # nodeCount += 1
+            # if self.isPuzzleSolved(successorNode):
+            #     # raise Exception('blah %d' % nodeCount + 1)
+            #     if debug:
+            #         print('Solved2: nodeCount = %d' % nodeCount)
+            #         print('\tsoln2 %s' % successorNode)
+            #         raise Exception('matt')
+            #     return successorNode, nodeCount
             estimate = max(nodeCount + whichHeuristic(successorNode), nodeCount)
             id = self.getPuzzleId(successorNode)
 
-            #if id not in self.checkedIds:
-            q.put((estimate, id, successorNode))
-            #    self.checkedIds[id] = 1
+            if debug:
+                print('Successor:: est=%d, id=%d, puzzle=%s' % (estimate, id, successorNode))
 
-        while True:
-            (bestF, id, bestNode) = q.get()
+            # the 'id' is used for the queue to distinguish between nodes with the same heuristic value
+            self.frontier.put((estimate, id, successorNode))
+
+        nodeCount += len(successorNodes)
+
+        while not self.frontier.empty():
+            (bestF, id, bestNode) = self.frontier.get()
+            if debug:
+                print('best f: %d, node %s' % (bestF, bestNode))
+
+            # if the best node exceeds the limit, return
             if bestF > fLimit:
                 return None, bestF
 
-            (altF, id, altNode) = q.get()
+            (altF, id, altNode) = self.frontier.get()
+            if debug:
+                print('alt  f: %d, node %s' % (altF, altNode))
             nextF = min(fLimit, altF)
-            nodeCount += len(successorNodes)
-            result, bestF = self.rbfsMain(bestNode, nextF, whichHeuristic, nodeCount + 1)
-            if result:
+
+            result, bestF = self.rbfsMain(bestNode, nextF, whichHeuristic, nodeCount)
+            if result != None:
                 if debug:
                     print('Solved3: nodeCount = %d' % nodeCount)
-                    print('\tsoln %s' % node)
+                    print('\tsoln3 %s' % node)
 
-                return result, bestF
-
-            a = 1
-            print('blah')
+                # return result, bestF
+                break
+        return result, nodeCount
             #raise Exception('matt')
 
     def generateNodes(self, puzzle=None):
@@ -679,7 +702,7 @@ class TestPuzzle(unittest.TestCase):
         puzzle.moveToEmptyCell(12)
         (result, nodeCount) = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock)
         self.assertTrue(puzzle.isPuzzleSolved(result))
-        self.assertEqual(1, nodeCount)
+        self.assertEqual(2, nodeCount)
 
 
     def test_rbfs_complex(self):
@@ -688,16 +711,34 @@ class TestPuzzle(unittest.TestCase):
         :return:
         """
         puzzle = Puzzle()
-        puzzle.scramblePuzzle(4)        # TODO: only handles 2 but nothing greater, why?
-        (result, nodeCount) = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock)
+        puzzle.moveToEmptyCell(15)
+        puzzle.moveToEmptyCell(11)
+        puzzle.moveToEmptyCell(7)
+        # [1,   2,  3, 4],
+        # [5,   6,  _, 8],
+        # [9,  10,  7, 12]
+        # [13, 14, 11, 15]
+        (result, nodeCount) = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock, maxNodes=10)
+        self.assertTrue(puzzle.isPuzzleSolved(result))
+        self.assertTrue(nodeCount < 100)
+
+    def rbfs_m(self, m):
+        """
+        Functional test for rbfs with complex (high m) scrambled initial state
+        :return:
+        """
+        puzzle = Puzzle()
+        puzzle.scramblePuzzle(m)
+        (result, nodeCount) = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock, maxNodes=10)
         self.assertTrue(puzzle.isPuzzleSolved(result))
         self.assertTrue(nodeCount < 100)
 
     def test_rbfs(self):
         # run simple test for now
-        # self.test_rbfs_base()
-        # self.test_rbfs_simple()
+        self.test_rbfs_base()
+        self.test_rbfs_simple()
         self.test_rbfs_complex()
+        # self.rbfs_m(10)         # TODO  WIP
 
     def test_cityBlock(self):
         """
@@ -708,6 +749,11 @@ class TestPuzzle(unittest.TestCase):
 
         # base case: solved puzzle, city block should return 0
         self.assertEqual(0, puzzle.cityBlock())
+
+        # simple case: 2 tiles moved, should return 2
+        puzzle.moveToEmptyCell(12)
+        puzzle.moveToEmptyCell(11)
+        self.assertEqual(2, puzzle.cityBlock())
 
         scrambled = [
             [4,   1, 3,           2],
