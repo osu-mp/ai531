@@ -373,7 +373,7 @@ class Puzzle:
 
         # add the child nodes to the frontier
         for successorNode in successorNodes:
-            # nodeCount += 1
+            nodeCount += 1
             # if self.isPuzzleSolved(successorNode):
             #     # raise Exception('blah %d' % nodeCount + 1)
             #     if debug:
@@ -722,23 +722,32 @@ class TestPuzzle(unittest.TestCase):
         self.assertTrue(puzzle.isPuzzleSolved(result))
         self.assertTrue(nodeCount < 100)
 
-    def rbfs_m(self, m):
+    def rbfs_m_of_10(self):
         """
-        Functional test for rbfs with complex (high m) scrambled initial state
+        Functional test for rbfs with 10 moves from initial state
         :return:
         """
         puzzle = Puzzle()
-        puzzle.scramblePuzzle(m)
-        (result, nodeCount) = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock, maxNodes=10)
+        puzzle.moveToEmptyCell(12)
+        puzzle.moveToEmptyCell(11)
+        puzzle.moveToEmptyCell(15)
+        puzzle.moveToEmptyCell(14)
+        puzzle.moveToEmptyCell(10)
+        puzzle.moveToEmptyCell(9)
+        puzzle.moveToEmptyCell(13)
+        # puzzle.moveToEmptyCell(10)
+        # puzzle.moveToEmptyCell(14)
+        # puzzle.moveToEmptyCell(15)
+        (result, nodeCount) = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock, maxNodes=1000)
         self.assertTrue(puzzle.isPuzzleSolved(result))
-        self.assertTrue(nodeCount < 100)
+        self.assertTrue(nodeCount < 1000)
 
     def test_rbfs(self):
         # run simple test for now
-        self.test_rbfs_base()
-        self.test_rbfs_simple()
-        self.test_rbfs_complex()
-        # self.rbfs_m(10)         # TODO  WIP
+        # self.test_rbfs_base()
+        # self.test_rbfs_simple()
+        # self.test_rbfs_complex()
+        self.rbfs_m_of_10()
 
     def test_cityBlock(self):
         """
