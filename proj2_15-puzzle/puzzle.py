@@ -66,6 +66,7 @@ puzzleSize = 4              # number of rows and cols for puzzle (4 means 4x4 gr
 collectData = False         # set to True to generate test data (long runtime)
 maxNodes = 1000             # TODO tune to a sensible value
 csvFilename = 'data.csv'    # where test runtimes are written
+debug = False               # prints debug messages when enabled
 
 class Puzzle:
     def __init__(self):
@@ -127,7 +128,8 @@ class Puzzle:
                 next = random.choice(neighbors)
 
             self.moveToEmptyCell(next)
-            print("Scramble: moved %d to empty cell" % next)
+            if debug:
+                print("Scramble: moved %d to empty cell" % next)
             lastMoved = next
 
         # return a copy for data collection (allows to use same scrambled puzzle for different configs)
@@ -161,6 +163,7 @@ class Puzzle:
             for col in range(puzzleSize):
                 if self.puzzle[row][col] == target:
                     return(row, col)
+
 
     def getEmptyPosition(self):
         """
@@ -214,21 +217,70 @@ class Puzzle:
 
     def cityBlock(self):
         """
-        City block heuristic: estimate number of cells
+        City block heuristic: estimate number of moves for each tile to intended location
+        This is admissible since it never over-estimates the number of moves
         :return:
         """
-        print('This is the cityBlock heuristic')
-        return 8
-        # raise Exception('TODO: Joe')
+        # for each tile, count the number of moves to its intended position (assume no other tiles)
+        sum = 0
+
+        for row in range(puzzleSize):
+            for col in range(puzzleSize):
+                # expected tile position (+1 because arrays start at 0, tiles start at 1)
+                expectedTile = row * puzzleSize + col + 1
+
+                # the last spot in the board is reserved for empty space, ignore for this heuristic
+                if expectedTile == (puzzleSize * puzzleSize):
+                    continue
+
+                # get location of expected tile and calculate distance (absolute in case it moves up/left)
+                actRow, actCol = self.getPosition(expectedTile)
+                dist = abs(actRow - row) + abs(actCol - col)
+                if debug:
+                    print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
+
+                sum += dist
+
+        return sum
 
     def myHeuristic(self):
         """
-        TBD heuristic defined by us
+        Heuristic defined by us
+        Use the city block estimate plus the distance to the empty square
+        This is not admissible since it may over-estimate the number of moves
+        -i.e. if the give tile is one move away from its intended location and the emtpy square
+        is there, it only needs to move once (but this algo returns 2 for that tile)
         :return:
         """
-        print('This is my heuristic')
-        return 9
-        # raise Exception('TODO: Joe')
+        sum = 0
+        (emptyRow, emptyCol) = self.getEmptyPosition()
+
+        for row in range(puzzleSize):
+            for col in range(puzzleSize):
+                # expected tile position (+1 because arrays start at 0, tiles start at 1)
+                expectedTile = row * puzzleSize + col + 1
+
+                # the last spot in the board is reserved for empty space, ignore for this heuristic
+                if expectedTile == (puzzleSize * puzzleSize):
+                    continue
+
+                # get location of expected tile and calculate distance (absolute in case it moves up/left)
+                actRow, actCol = self.getPosition(expectedTile)
+                dist = abs(actRow - row) + abs(actCol - col)
+                if debug:
+                    print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
+
+                # if at correct spot, do not consider moving empty tile
+                if dist == 0:
+                    continue
+
+                # otherwise add distance to empty tile (this makes the algo not admissible)
+                emptyDist = abs(actRow - emptyRow) + abs(actCol - emptyCol)
+                if debug:
+                    print('myHeuristic moves from emtpy: %d' % emptyDist)
+                sum += dist + emptyDist
+
+        return sum
 
     def aStar(self, whichHeuristic, maxNodes=1000):
         """
@@ -454,6 +506,60 @@ class TestPuzzle(unittest.TestCase):
                         (nodesChecked, runTime) = trial
                         writer.writerow([mValue, puzzleNum, algo, heuristic, nodesChecked, runTime])
         print('Data collection complete, results written to: %s' % csvFilename)
+
+    def test_cityBlock(self):
+        """
+        Unit tests for city block heuristic
+        :return:
+        """
+        puzzle = Puzzle()
+
+        # base case: solved puzzle, city block should return 0
+        self.assertEqual(0, puzzle.cityBlock())
+
+        scrambled = [
+            [4,   1, 3,           2],
+            [5,   6, emptySquare, 8],
+            [10,  9, 7,          11],
+            [15, 14, 13,         12]
+        ]
+
+        puzzle.puzzle = scrambled
+
+        # using above puzzle, expected city block is (tiles 1 through 15 distances added):
+        # e.g. tile 1 is 1 spot away, tile 2 is 2, tile 3 is where it belongs, etc
+        expected = 1 + 2 + 0 + 3 + 0 + 0 + 1 + 0 + 1 + 1 + 1 + 1 + 2 + 0 + 2
+        # tiles    1   2   3   4   5   6   7   8   9  10  11  12  13  14  15
+        self.assertEqual(expected, puzzle.cityBlock())
+
+    def test_myHeuristic(self):
+        """
+        Unit tests for my heuristic
+        :return:
+        """
+        puzzle = Puzzle()
+
+        # base case: solved puzzle, city block should return 0
+        self.assertEqual(0, puzzle.cityBlock())
+
+        scrambled = [
+            [4,   1, 3,           2],
+            [5,   6, emptySquare, 8],
+            [10,  9, 7,          11],
+            [15, 14, 13,         12]
+        ]
+
+        puzzle.puzzle = scrambled
+
+        # using above puzzle, expected my heuristic is (tiles 1 through 15 distances added):
+        # e.g. tile 1 is 1 spot away from target and 2 away from emtpy,
+        # tile 2 is 2 away from target and 2 from empty,
+        # tile 3 is where it belongs, etc
+        expected =  (1 + 2) + (2 + 2) + 0 + (3 + 3) + 0 + 0 + (1 + 1) + 0
+        # tile       1         2        3    4        5   6    7        8
+        expected += (1 + 2) + (1 + 3) + (1 + 2) + (1 + 3) + (2 + 2) + 0 + (2 + 4)
+        #            9         10        11       12        13        14   15
+        self.assertEqual(expected, puzzle.myHeuristic())
 
 if __name__ == '__main__':
     unittest.main()
