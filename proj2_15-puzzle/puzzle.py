@@ -5,11 +5,13 @@
 # Joe Nguyen
 # Matthew Pacey
 
+import copy
 import csv
 import random
 import time
 import unittest
 
+from queue import PriorityQueue
 """
 TODO: Define classes/tests
 Heuristic: City Block
@@ -106,8 +108,11 @@ class Puzzle:
         puzzle[puzzleSize - 1][puzzleSize - 1] = emptySquare
         return puzzle
 
-    def isPuzzleSolved(self):
-        return self.puzzle == self.getSolvedPuzzle()
+    def isPuzzleSolved(self, puzzle=None):
+        if not puzzle:                          # allow caller to pass in puzzle config
+            puzzle = self.puzzle                # use class member if not supplied
+
+        return puzzle == self.getSolvedPuzzle()
 
     def scramblePuzzle(self, m):
         """
@@ -135,13 +140,16 @@ class Puzzle:
         # return a copy for data collection (allows to use same scrambled puzzle for different configs)
         return self.puzzle.copy()
 
-    def print(self):
+    def print(self, puzzle=None):
         """
         Print the current configuration
         :return:
         """
+        if not puzzle:                          # allow caller to pass in puzzle config
+            puzzle = self.puzzle                # use class member if not supplied
+
         str = ""
-        for row in self.puzzle:
+        for row in puzzle:
             for col in row:
                 if col == emptySquare:
                     str += "   "
@@ -150,68 +158,77 @@ class Puzzle:
             str += "\n"
         print(str)
 
-
-
-    def getPosition(self, target):
+    def getPosition(self, target, puzzle=None):
         """
         Return the row and col of the target number (or empty cell)
         :param target:
         :return:
         """
+        if not puzzle:                          # allow caller to pass in puzzle config
+            puzzle = self.puzzle                # use class member if not supplied
+
         # TODO does using modulo or caching significantly help?
         for row in range(puzzleSize):
             for col in range(puzzleSize):
-                if self.puzzle[row][col] == target:
+                if puzzle[row][col] == target:
                     return(row, col)
 
-
-    def getEmptyPosition(self):
+    def getEmptyPosition(self, puzzle=None):
         """
         Return the row and col where the empty square is
         :return:
         """
-        return self.getPosition(emptySquare)
+        if not puzzle:                          # allow caller to pass in puzzle config
+            puzzle = self.puzzle                # use class member if not supplied
 
-    def getNeighbors(self, target):
+        return self.getPosition(emptySquare, puzzle)
+
+    def getNeighbors(self, target, puzzle=None):
         """
         Return neighbors of the given target (numbers that it can swap with)
         :param target:
         :return:
         """
-        row, col = self.getPosition(target)
+        if not puzzle:                          # allow caller to pass in puzzle config
+            puzzle = self.puzzle                # use class member if not supplied
+
+        row, col = self.getPosition(target, puzzle)
 
         neighbors = []
         # up
         if row > 0:
-            neighbors.append(self.puzzle[row - 1][col])
+            neighbors.append(puzzle[row - 1][col])
         # left
         if col > 0:
-            neighbors.append(self.puzzle[row][col - 1])
+            neighbors.append(puzzle[row][col - 1])
         # right
         if col < puzzleSize - 1:
-            neighbors.append(self.puzzle[row][col + 1])
+            neighbors.append(puzzle[row][col + 1])
         # down
         if row < puzzleSize - 1:
-            neighbors.append(self.puzzle[row + 1][col])
+            neighbors.append(puzzle[row + 1][col])
 
         return neighbors
 
-    def moveToEmptyCell(self, target):
+    def moveToEmptyCell(self, target, puzzle=None):
         """
         Move the given number into the empty cell
         :param target:
         :return: True if moved, Exception if blocked
         """
-        neighbors = self.getNeighbors(target)
+        if not puzzle:                          # allow caller to pass in puzzle config
+            puzzle = self.puzzle                # use class member if not supplied
+
+        neighbors = self.getNeighbors(target, puzzle)
         if emptySquare not in neighbors:
-            raise Exception("Target number %d is not adjacent to empty cell, cannot move")
+            raise Exception("Target number %d is not adjacent to empty cell, cannot move" % target)
 
         # if they are neighbors, swap the positions
-        tarRow, tarCol = self.getPosition(target)       # position of target number that is moving
-        empRow, empCol = self.getEmptyPosition()        # position of empty cell
+        tarRow, tarCol = self.getPosition(target, puzzle)       # position of target number that is moving
+        empRow, empCol = self.getEmptyPosition(puzzle)        # position of empty cell
 
-        self.puzzle[tarRow][tarCol] = emptySquare
-        self.puzzle[empRow][empCol] = target
+        puzzle[tarRow][tarCol] = emptySquare
+        puzzle[empRow][empCol] = target
 
         return True
 
@@ -299,13 +316,92 @@ class Puzzle:
         Recursive best first search
         :return: Number of nodes checked
         """
+        (solution, fValue) = self.rbfsMain(self.puzzle, float('inf'), whichHeuristic, 0)
+        return solution
+
+    def rbfsMain(self, node, fLimit, whichHeuristic, nodeCount):
+        """
+
+        :param puzzle:
+        :param node:
+        :param fLimit:
+        :param whichHeuristic:
+        :return:
+        """
+        # see page 93 in book
+        if self.isPuzzleSolved(node):
+            #raise Exception('solved')
+            return node, -1
+
+        successorNodes = self.generateNodes(node)
+        if not successorNodes:
+            return (False, float('inf'))
+
+        q = PriorityQueue()
+        for successorNode in successorNodes:
+            estimate = max(nodeCount + whichHeuristic(successorNode), nodeCount)
+            q.put((estimate, successorNode))
+
+        while True:
+            (bestF, bestNode) = q.get()
+            if bestF > fLimit:
+                return False, bestF
+
+            (altF, altNode) = q.get()
+            nextF = min(fLimit, altF)
+            nodeCount += len(successorNodes)
+            result, bestF = self.rbfsMain(bestNode, nextF, whichHeuristic, nodeCount)
+            if result:
+                return True, bestF
+            a = 1
+        '''
+        
+        for successor in sucessors:
+            sf = max(sp - cost + whichHeuristic(s), node.f))
+
+        while True:
+            best = successor node with lowest f-value
+            if best.f > fLimit:
+                return (False, best.f)
+            alternative = second lowest successor node
+            result, best.f = self.rbfsMain(puzzle, best, min(fLimit, alternative))
+            if result != False:
+                return (result, best.f)
+
+        raise Exception('TODO: Matthew')
+
         estimate = whichHeuristic()
         print('rbfs search with %s (estimate %d)' % (whichHeuristic.__name__, estimate))
         time.sleep(2)
         #raise Exception('TODO: Matthew')
         nodesChecked = 20
         return nodesChecked
+        '''
 
+    def generateNodes(self, puzzle=None):
+        """
+        Using the current configuration, generate 1 node for each direction the empty square can move
+        This will generate 2-4 nodes
+        :param self:
+        :return:
+        """
+        if not puzzle:                          # allow caller to pass in puzzle config
+            puzzle = self.puzzle                # use class member if not supplied
+
+        nodes = []
+        currPuzzle = puzzle.copy()
+        neighbors = self.getNeighbors(emptySquare, puzzle)
+        for neighbor in neighbors:
+            node = copy.deepcopy(currPuzzle)
+            self.moveToEmptyCell(neighbor, node)
+            nodes.append(node)
+
+        return nodes
+
+class Successor():
+    def __init__(self, node, value):
+        self.node = node
+        self.value = value
 
 class TestPuzzle(unittest.TestCase):
 
@@ -507,6 +603,43 @@ class TestPuzzle(unittest.TestCase):
                         writer.writerow([mValue, puzzleNum, algo, heuristic, nodesChecked, runTime])
         print('Data collection complete, results written to: %s' % csvFilename)
 
+    def test_generateNodes(self):
+        """
+        Test for generateNodes. Show nodes generated for branch checking
+        :return:
+        """
+        puzzle = Puzzle()
+        # puzzle is solved, so empty tile is in bottom right. There are two possible nodes
+        # from here: empty can move up or left (verify both are created)
+        nodes = puzzle.generateNodes()
+        expectedNodeUp = [
+            [1,   2, 3,   4],
+            [5,   6, 7,   8],
+            [9,  10, 11, emptySquare],
+            [13, 14, 15, 12]
+        ]
+        expectedNodeLeft = [
+            [1,   2, 3,   4],
+            [5,   6, 7,   8],
+            [9,  10, 11, 12],
+            [13, 14, emptySquare, 15]
+        ]
+        self.assertEqual(nodes, [expectedNodeUp, expectedNodeLeft])
+
+    def test_rbfs(self):
+        """
+        Functional tests for rbfs search algo
+        :return:
+        """
+        puzzle = Puzzle()
+        solvedPuzzle = puzzle.getSolvedPuzzle()
+        result = puzzle.rbfs(puzzle.cityBlock)
+        self.assertTrue(result != None)
+
+        puzzle.moveToEmptyCell(12)
+        result = puzzle.rbfs(puzzle.cityBlock)
+        self.assertTrue(puzzle.isPuzzleSolved(result))
+
     def test_cityBlock(self):
         """
         Unit tests for city block heuristic
@@ -560,6 +693,7 @@ class TestPuzzle(unittest.TestCase):
         expected += (1 + 2) + (1 + 3) + (1 + 2) + (1 + 3) + (2 + 2) + 0 + (2 + 4)
         #            9         10        11       12        13        14   15
         self.assertEqual(expected, puzzle.myHeuristic())
+
 
 if __name__ == '__main__':
     unittest.main()
