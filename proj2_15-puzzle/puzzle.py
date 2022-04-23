@@ -232,12 +232,15 @@ class Puzzle:
 
         return True
 
-    def cityBlock(self):
+    def cityBlock(self, puzzle=None):
         """
         City block heuristic: estimate number of moves for each tile to intended location
         This is admissible since it never over-estimates the number of moves
         :return:
         """
+        if not puzzle:                          # allow caller to pass in puzzle config
+            puzzle = self.puzzle                # use class member if not supplied
+
         # for each tile, count the number of moves to its intended position (assume no other tiles)
         sum = 0
 
@@ -251,7 +254,7 @@ class Puzzle:
                     continue
 
                 # get location of expected tile and calculate distance (absolute in case it moves up/left)
-                actRow, actCol = self.getPosition(expectedTile)
+                actRow, actCol = self.getPosition(expectedTile, puzzle)
                 dist = abs(actRow - row) + abs(actCol - col)
                 if debug:
                     print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
@@ -260,7 +263,7 @@ class Puzzle:
 
         return sum
 
-    def myHeuristic(self):
+    def myHeuristic(self, puzzle=None):
         """
         Heuristic defined by us
         Use the city block estimate plus the distance to the empty square
@@ -269,8 +272,11 @@ class Puzzle:
         is there, it only needs to move once (but this algo returns 2 for that tile)
         :return:
         """
+        if not puzzle:                          # allow caller to pass in puzzle config
+            puzzle = self.puzzle                # use class member if not supplied
+
         sum = 0
-        (emptyRow, emptyCol) = self.getEmptyPosition()
+        (emptyRow, emptyCol) = self.getEmptyPosition(puzzle)
 
         for row in range(puzzleSize):
             for col in range(puzzleSize):
@@ -282,7 +288,7 @@ class Puzzle:
                     continue
 
                 # get location of expected tile and calculate distance (absolute in case it moves up/left)
-                actRow, actCol = self.getPosition(expectedTile)
+                actRow, actCol = self.getPosition(expectedTile, puzzle)
                 dist = abs(actRow - row) + abs(actCol - col)
                 if debug:
                     print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
@@ -299,7 +305,7 @@ class Puzzle:
 
         return sum
 
-    def aStar(self, whichHeuristic, maxNodes=1000):
+    def aStar(self, puzzle, whichHeuristic, maxNodes=1000):
         """
         A* search
         :return: Number of nodes checked
@@ -311,13 +317,16 @@ class Puzzle:
         nodesChecked = 10
         return nodesChecked
 
-    def rbfs(self, whichHeuristic, maxNodes=1000):
+    def rbfs(self, puzzle, whichHeuristic, maxNodes=1000):
         """
         Recursive best first search
         :return: Number of nodes checked
         """
-        (solution, fValue) = self.rbfsMain(self.puzzle, float('inf'), whichHeuristic, 0)
-        return solution
+        print('rbfs for %s' % puzzle)#self.print(puzzle))
+        (solution, fValue) = self.rbfsMain(puzzle, float('inf'), whichHeuristic, 0)
+        print('\tsoln %s\n\tmoves %d' % (solution, fValue))
+        # return (solution, fValue)
+        return fValue
 
     def rbfsMain(self, node, fLimit, whichHeuristic, nodeCount):
         """
@@ -330,53 +339,33 @@ class Puzzle:
         """
         # see page 93 in book
         if self.isPuzzleSolved(node):
-            #raise Exception('solved')
-            return node, -1
+            # raise Exception('solved')
+            return node, nodeCount
 
         successorNodes = self.generateNodes(node)
         if not successorNodes:
             return (False, float('inf'))
 
-        q = PriorityQueue()
+        q = SuccessorQueue()
         for successorNode in successorNodes:
+            if self.isPuzzleSolved(successorNode):
+                # raise Exception('blah %d' % nodeCount + 1)
+                return successorNode, nodeCount + 1
             estimate = max(nodeCount + whichHeuristic(successorNode), nodeCount)
-            q.put((estimate, successorNode))
+            id = self.getPuzzleId(successorNode)
+            q.put((estimate, id, successorNode))
 
         while True:
-            (bestF, bestNode) = q.get()
+            (bestF, id, bestNode) = q.get()
             if bestF > fLimit:
                 return False, bestF
 
-            (altF, altNode) = q.get()
+            (altF, id, altNode) = q.get()
             nextF = min(fLimit, altF)
             nodeCount += len(successorNodes)
-            result, bestF = self.rbfsMain(bestNode, nextF, whichHeuristic, nodeCount)
+            result, bestF = self.rbfsMain(bestNode, nextF, whichHeuristic, nodeCount + 1)
             if result:
-                return True, bestF
-            a = 1
-        '''
-        
-        for successor in sucessors:
-            sf = max(sp - cost + whichHeuristic(s), node.f))
-
-        while True:
-            best = successor node with lowest f-value
-            if best.f > fLimit:
-                return (False, best.f)
-            alternative = second lowest successor node
-            result, best.f = self.rbfsMain(puzzle, best, min(fLimit, alternative))
-            if result != False:
-                return (result, best.f)
-
-        raise Exception('TODO: Matthew')
-
-        estimate = whichHeuristic()
-        print('rbfs search with %s (estimate %d)' % (whichHeuristic.__name__, estimate))
-        time.sleep(2)
-        #raise Exception('TODO: Matthew')
-        nodesChecked = 20
-        return nodesChecked
-        '''
+                return result, bestF
 
     def generateNodes(self, puzzle=None):
         """
@@ -398,10 +387,32 @@ class Puzzle:
 
         return nodes
 
-class Successor():
-    def __init__(self, node, value):
-        self.node = node
-        self.value = value
+    def getPuzzleId(self, puzzle):
+        """
+        Calculate a unique id for the given puzzle. This is needed for the rbfs prioirity queue
+        if two nodes have the same fValue.
+        This routine multiplies every existing tile against the expected tile in the solved puzzle.
+        As long as two puzzles are different, this number should be different.
+        :param puzzle:
+        :return:
+        """
+        sum = 0
+        for row in range(puzzleSize):
+            for col in range(puzzleSize):
+                # expected tile position (+1 because arrays start at 0, tiles start at 1)
+                expectedTile = row * puzzleSize + col + 1
+                actualTile = puzzle[row][col]
+                if actualTile == emptySquare:           # ignore empty square
+                    continue
+                sum += expectedTile * actualTile
+
+        return sum
+
+class SuccessorQueue(PriorityQueue):
+    def __eq__(self, other):
+        a = 1
+        return -1
+
 
 class TestPuzzle(unittest.TestCase):
 
@@ -522,7 +533,7 @@ class TestPuzzle(unittest.TestCase):
         ]
         self.assertEqual(puzzle.puzzle, expected)
 
-    def runTest(self, puzzleObj, searchFunc, heuristic):
+    def runTest(self, puzzle, searchFunc, heuristic):
         """
         Run the specified search function using given heuristic and return runtime in seconds
         :param puzzle:
@@ -531,7 +542,7 @@ class TestPuzzle(unittest.TestCase):
         :return:
         """
         start = time.time()                             # get start time
-        nodesChecked = searchFunc(heuristic)            # run the search function with selected heuristic
+        nodesChecked = searchFunc(puzzle, heuristic)            # run the search function with selected heuristic
         end = time.time()                               # record runtime
 
         return (nodesChecked, end - start)              # return number of nodes checked and runtime
@@ -557,7 +568,7 @@ class TestPuzzle(unittest.TestCase):
                 runData[algo][heuristic] = {}
 
         puzzle = Puzzle()
-        for m in [10, 20, 30, 40, 50]:                      # run for increasing number of moves from solved puzzle
+        for m in [3]:#, 20, 30, 40, 50]:                      # run for increasing number of moves from solved puzzle
 
             runData['astar']['cityBlock'][m] = []
             runData['astar']['myHeuristic'][m] = []
@@ -568,30 +579,26 @@ class TestPuzzle(unittest.TestCase):
                 base = Puzzle()
                 basePuzzle = base.scramblePuzzle(m)         # ensure all 4 configurations use the same scrambled puzzle
                 print('Puzzle Number %d' % n)
-                print(base.print())
+                print(base.print(basePuzzle))
 
                 # astar with city block heuristic
-                test = Puzzle()
-                test.puzzle = basePuzzle
-                (nodesChecked, runTime) = self.runTest(test, puzzle.aStar, puzzle.cityBlock)
+                testPuzzle = copy.deepcopy(basePuzzle)
+                (nodesChecked, runTime) = self.runTest(testPuzzle, puzzle.aStar, puzzle.cityBlock)
                 runData['astar']['cityBlock'][m].append([nodesChecked, runTime])
 
                 # astar with my heuristic
-                test = Puzzle()
-                test.puzzle = basePuzzle
-                (nodesChecked, runTime) = self.runTest(test, puzzle.aStar, puzzle.myHeuristic)
+                testPuzzle = copy.deepcopy(basePuzzle)
+                (nodesChecked, runTime) = self.runTest(testPuzzle, puzzle.aStar, puzzle.myHeuristic)
                 runData['astar']['myHeuristic'][m].append([nodesChecked, runTime])
 
                 # rbfs with city block heuristic
-                test = Puzzle()
-                test.puzzle = basePuzzle
-                (nodesChecked, runTime) = self.runTest(basePuzzle, puzzle.rbfs, puzzle.cityBlock)
+                testPuzzle = copy.deepcopy(basePuzzle)
+                (nodesChecked, runTime) = self.runTest(testPuzzle, puzzle.rbfs, puzzle.cityBlock)
                 runData['rbfs']['cityBlock'][m].append([nodesChecked, runTime])
 
                 # rbfs with my heuristic
-                test = Puzzle()
-                test.puzzle = basePuzzle
-                (nodesChecked, runTime) = self.runTest(basePuzzle, puzzle.rbfs, puzzle.myHeuristic)
+                testPuzzle = copy.deepcopy(basePuzzle)
+                (nodesChecked, runTime) = self.runTest(testPuzzle, puzzle.rbfs, puzzle.myHeuristic)
                 runData['rbfs']['myHeuristic'][m].append([nodesChecked, runTime])
 
         # now that all data has been collected, write it grouped by algo/heuristic
@@ -633,12 +640,27 @@ class TestPuzzle(unittest.TestCase):
         """
         puzzle = Puzzle()
         solvedPuzzle = puzzle.getSolvedPuzzle()
-        result = puzzle.rbfs(puzzle.cityBlock)
-        self.assertTrue(result != None)
+        # (result, nodeCount) = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock)
+        # self.assertTrue(result != None)
 
+        # puzzle.moveToEmptyCell(12)
+        # (result, nodeCount) = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock)
+        # self.assertTrue(puzzle.isPuzzleSolved(result))
+        # self.assertEqual(1, nodeCount)
+
+
+        puzzle = Puzzle()
         puzzle.moveToEmptyCell(12)
-        result = puzzle.rbfs(puzzle.cityBlock)
-        self.assertTrue(puzzle.isPuzzleSolved(result))
+        puzzle.moveToEmptyCell(8)
+        nodeCount = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock)
+        #self.assertTrue(puzzle.isPuzzleSolved(result))
+        self.assertEqual(5, nodeCount)
+
+        puzzle = Puzzle()
+        puzzle.scramblePuzzle(2)        # TODO: only handles 2 but nothing greater, why?
+        nodeCount = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock)
+        #self.assertTrue(puzzle.isPuzzleSolved(result))
+        self.assertTrue(nodeCount < 100)
 
     def test_cityBlock(self):
         """
