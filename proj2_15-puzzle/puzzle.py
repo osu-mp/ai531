@@ -5,6 +5,7 @@
 # Joe Nguyen
 # Matthew Pacey
 
+import copy
 import csv
 import random
 import time
@@ -105,8 +106,11 @@ class Puzzle:
         puzzle[puzzleSize - 1][puzzleSize - 1] = emptySquare
         return puzzle
 
-    def isPuzzleSolved(self):
-        return self.puzzle == self.getSolvedPuzzle()
+    def isPuzzleSolved(self, puzzle=None):
+        if not puzzle:                          # allow caller to pass in puzzle config
+            puzzle = self.puzzle                # use class member if not supplied
+
+        return puzzle == self.getSolvedPuzzle()
 
     def scramblePuzzle(self, m):
         """
@@ -133,13 +137,16 @@ class Puzzle:
         # return a copy for data collection (allows to use same scrambled puzzle for different configs)
         return self.puzzle.copy()
 
-    def print(self):
+    def print(self, puzzle=None):
         """
         Print the current configuration
         :return:
         """
+        if not puzzle:                          # allow caller to pass in puzzle config
+            puzzle = self.puzzle                # use class member if not supplied
+
         str = ""
-        for row in self.puzzle:
+        for row in puzzle:
             for col in row:
                 if col == emptySquare:
                     str += "   "
@@ -148,67 +155,77 @@ class Puzzle:
             str += "\n"
         print(str)
 
-
-
-    def getPosition(self, target):
+    def getPosition(self, target, puzzle=None):
         """
         Return the row and col of the target number (or empty cell)
         :param target:
         :return:
         """
+        if not puzzle:                          # allow caller to pass in puzzle config
+            puzzle = self.puzzle                # use class member if not supplied
+
         # TODO does using modulo or caching significantly help?
         for row in range(puzzleSize):
             for col in range(puzzleSize):
-                if self.puzzle[row][col] == target:
+                if puzzle[row][col] == target:
                     return(row, col)
 
-    def getEmptyPosition(self):
+    def getEmptyPosition(self, puzzle=None):
         """
         Return the row and col where the empty square is
         :return:
         """
-        return self.getPosition(emptySquare)
+        if not puzzle:                          # allow caller to pass in puzzle config
+            puzzle = self.puzzle                # use class member if not supplied
 
-    def getNeighbors(self, target):
+        return self.getPosition(emptySquare, puzzle)
+
+    def getNeighbors(self, target, puzzle=None):
         """
         Return neighbors of the given target (numbers that it can swap with)
         :param target:
         :return:
         """
-        row, col = self.getPosition(target)
+        if not puzzle:                          # allow caller to pass in puzzle config
+            puzzle = self.puzzle                # use class member if not supplied
+
+        row, col = self.getPosition(target, puzzle)
 
         neighbors = []
         # up
         if row > 0:
-            neighbors.append(self.puzzle[row - 1][col])
+            neighbors.append(puzzle[row - 1][col])
         # left
         if col > 0:
-            neighbors.append(self.puzzle[row][col - 1])
+            neighbors.append(puzzle[row][col - 1])
         # right
         if col < puzzleSize - 1:
-            neighbors.append(self.puzzle[row][col + 1])
+            neighbors.append(puzzle[row][col + 1])
         # down
         if row < puzzleSize - 1:
-            neighbors.append(self.puzzle[row + 1][col])
+            neighbors.append(puzzle[row + 1][col])
 
         return neighbors
 
-    def moveToEmptyCell(self, target):
+    def moveToEmptyCell(self, target, puzzle=None):
         """
         Move the given number into the empty cell
         :param target:
         :return: True if moved, Exception if blocked
         """
-        neighbors = self.getNeighbors(target)
+        if not puzzle:                          # allow caller to pass in puzzle config
+            puzzle = self.puzzle                # use class member if not supplied
+
+        neighbors = self.getNeighbors(target, puzzle)
         if emptySquare not in neighbors:
-            raise Exception("Target number %d is not adjacent to empty cell, cannot move")
+            raise Exception("Target number %d is not adjacent to empty cell, cannot move" % target)
 
         # if they are neighbors, swap the positions
-        tarRow, tarCol = self.getPosition(target)       # position of target number that is moving
-        empRow, empCol = self.getEmptyPosition()        # position of empty cell
+        tarRow, tarCol = self.getPosition(target, puzzle)       # position of target number that is moving
+        empRow, empCol = self.getEmptyPosition(puzzle)        # position of empty cell
 
-        self.puzzle[tarRow][tarCol] = emptySquare
-        self.puzzle[empRow][empCol] = target
+        puzzle[tarRow][tarCol] = emptySquare
+        puzzle[empRow][empCol] = target
 
         return True
 
@@ -263,6 +280,7 @@ class Puzzle:
         if self.isPuzzleSolved():
             return node
 
+        '''
         sucessors = node.expand()
         if not sucessors:
             return (False, float('inf')
@@ -287,6 +305,24 @@ class Puzzle:
         #raise Exception('TODO: Matthew')
         nodesChecked = 20
         return nodesChecked
+        '''
+
+    def generateNodes(self):
+        """
+        Using the current configuration, generate 1 node for each direction the empty square can move
+        This will generate 2-4 nodes
+        :param self:
+        :return:
+        """
+        nodes = []
+        currPuzzle = self.puzzle.copy()
+        neighbors = self.getNeighbors(emptySquare)
+        for neighbor in neighbors:
+            node = copy.deepcopy(currPuzzle)
+            self.moveToEmptyCell(neighbor, node)
+            nodes.append(node)
+
+        return nodes
 
 
 class TestPuzzle(unittest.TestCase):
@@ -489,5 +525,27 @@ class TestPuzzle(unittest.TestCase):
                         writer.writerow([mValue, puzzleNum, algo, heuristic, nodesChecked, runTime])
         print('Data collection complete, results written to: %s' % csvFilename)
 
+    def test_generateNodes(self):
+        """
+        Test for generateNodes. Show nodes generated for branch checking
+        :return:
+        """
+        puzzle = Puzzle()
+        # puzzle is solved, so empty tile is in bottom right. There are two possible nodes
+        # from here: empty can move up or left (verify both are created)
+        nodes = puzzle.generateNodes()
+        expectedNodeUp = [
+            [1,   2, 3,   4],
+            [5,   6, 7,   8],
+            [9,  10, 11, emptySquare],
+            [13, 14, 15, 12]
+        ]
+        expectedNodeLeft = [
+            [1,   2, 3,   4],
+            [5,   6, 7,   8],
+            [9,  10, 11, 12],
+            [13, 14, emptySquare, 15]
+        ]
+        self.assertEqual(nodes, [expectedNodeUp, expectedNodeLeft])
 if __name__ == '__main__':
     unittest.main()
