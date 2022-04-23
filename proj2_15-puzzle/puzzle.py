@@ -331,7 +331,7 @@ class Puzzle:
         print('rbfs for %s' % puzzle)#self.print(puzzle))
         (solution, fValue) = self.rbfsMain(puzzle, maxsize, whichHeuristic, 0)
         if solution:
-            print('\tsoln %s\n\tmoves %d' % (solution, fValue))
+            print('\tsoln %s\n\tcost %d' % (solution, fValue))
         else:
             print('\tNo solution found in %d moves' % fValue)
         return (solution, fValue)
@@ -399,14 +399,15 @@ class Puzzle:
 
             # if the best node exceeds the limit, return
             if bestF > fLimit:
-                return None, bestF
+                return (None, bestF)
 
             (altF, id, altNode) = self.frontier.get()
             if debug:
                 print('alt  f: %d, node %s' % (altF, altNode))
             nextF = min(fLimit, altF)
+            # nextF = min(nodeCount, altF)
 
-            result, bestF = self.rbfsMain(bestNode, nextF, whichHeuristic, nodeCount)
+            (result, bestF) = self.rbfsMain(bestNode, nextF, whichHeuristic, nodeCount)
             if result != None:
                 if debug:
                     print('Solved3: nodeCount = %d' % nodeCount)
@@ -414,7 +415,7 @@ class Puzzle:
 
                 # return result, bestF
                 break
-        return result, nodeCount
+        return (result, nodeCount)
             #raise Exception('matt')
 
     def generateNodes(self, puzzle=None):
