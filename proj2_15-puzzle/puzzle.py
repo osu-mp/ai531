@@ -11,6 +11,7 @@ import random
 import time
 import unittest
 
+from queue import PriorityQueue
 """
 TODO: Define classes/tests
 Heuristic: City Block
@@ -264,10 +265,10 @@ class Puzzle:
         Recursive best first search
         :return: Number of nodes checked
         """
-        solution = self.rbfsMain(self.puzzle, node, float('inf'), whichHeuristic)
-        raise Exception('TODO: Matthew')
+        (solution, fValue) = self.rbfsMain(self.puzzle, float('inf'), whichHeuristic, 0)
+        return solution
 
-    def rbfsMain(self, puzzle, node, fLimit, whichHeuristic):
+    def rbfsMain(self, node, fLimit, whichHeuristic, nodeCount):
         """
 
         :param puzzle:
@@ -277,14 +278,33 @@ class Puzzle:
         :return:
         """
         # see page 93 in book
-        if self.isPuzzleSolved():
-            return node
+        if self.isPuzzleSolved(node):
+            #raise Exception('solved')
+            return node, -1
 
+        successorNodes = self.generateNodes(node)
+        if not successorNodes:
+            return (False, float('inf'))
+
+        q = PriorityQueue()
+        for successorNode in successorNodes:
+            estimate = max(nodeCount + whichHeuristic(successorNode), nodeCount)
+            q.put((estimate, successorNode))
+
+        while True:
+            (bestF, bestNode) = q.get()
+            if bestF > fLimit:
+                return False, bestF
+
+            (altF, altNode) = q.get()
+            nextF = min(fLimit, altF)
+            nodeCount += len(successorNodes)
+            result, bestF = self.rbfsMain(bestNode, nextF, whichHeuristic, nodeCount)
+            if result:
+                return True, bestF
+            a = 1
         '''
-        sucessors = node.expand()
-        if not sucessors:
-            return (False, float('inf')
-
+        
         for successor in sucessors:
             sf = max(sp - cost + whichHeuristic(s), node.f))
 
@@ -307,16 +327,19 @@ class Puzzle:
         return nodesChecked
         '''
 
-    def generateNodes(self):
+    def generateNodes(self, puzzle=None):
         """
         Using the current configuration, generate 1 node for each direction the empty square can move
         This will generate 2-4 nodes
         :param self:
         :return:
         """
+        if not puzzle:                          # allow caller to pass in puzzle config
+            puzzle = self.puzzle                # use class member if not supplied
+
         nodes = []
-        currPuzzle = self.puzzle.copy()
-        neighbors = self.getNeighbors(emptySquare)
+        currPuzzle = puzzle.copy()
+        neighbors = self.getNeighbors(emptySquare, puzzle)
         for neighbor in neighbors:
             node = copy.deepcopy(currPuzzle)
             self.moveToEmptyCell(neighbor, node)
@@ -324,6 +347,10 @@ class Puzzle:
 
         return nodes
 
+class Successor():
+    def __init__(self, node, value):
+        self.node = node
+        self.value = value
 
 class TestPuzzle(unittest.TestCase):
 
@@ -547,5 +574,21 @@ class TestPuzzle(unittest.TestCase):
             [13, 14, emptySquare, 15]
         ]
         self.assertEqual(nodes, [expectedNodeUp, expectedNodeLeft])
+
+    def test_rbfs(self):
+        """
+        Functional tests for rbfs search algo
+        :return:
+        """
+        puzzle = Puzzle()
+        solvedPuzzle = puzzle.getSolvedPuzzle()
+        result = puzzle.rbfs(puzzle.cityBlock)
+        self.assertTrue(result != None)
+
+        puzzle.moveToEmptyCell(12)
+        result = puzzle.rbfs(puzzle.cityBlock)
+        self.assertTrue(puzzle.isPuzzleSolved(result))
+
+
 if __name__ == '__main__':
     unittest.main()
