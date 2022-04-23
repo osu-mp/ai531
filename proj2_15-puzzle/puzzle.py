@@ -5,10 +5,13 @@
 # Joe Nguyen
 # Matthew Pacey
 
+import copy
 import csv
 import random
 import time
 import unittest
+
+from queue import PriorityQueue
 
 """
 TODO: Define classes/tests
@@ -62,10 +65,12 @@ For each m, plot the average time consumed, nodes searched, and the optimal solu
 """
 
 emptySquare = '_'
-puzzleSize = 4              # number of rows and cols for puzzle (4 means 4x4 grid with 15 numbers and one emtpy cell)
-collectData = False         # set to True to generate test data (long runtime)
-maxNodes = 1000             # TODO tune to a sensible value
-csvFilename = 'data.csv'    # where test runtimes are written
+puzzleSize = 4  # number of rows and cols for puzzle (4 means 4x4 grid with 15 numbers and one emtpy cell)
+collectData = False  # set to True to generate test data (long runtime)
+maxNodes = 1000  # TODO tune to a sensible value
+csvFilename = 'data.csv'  # where test runtimes are written
+debug = False  # prints debug messages when enabled
+
 
 class Puzzle:
     def __init__(self):
@@ -98,15 +103,18 @@ class Puzzle:
         for row in range(puzzleSize):
             line = []
             for col in range(puzzleSize):
-                line.append(row * puzzleSize + col + 1)         # add 1 to start tiles at 1 instead of 0
+                line.append(row * puzzleSize + col + 1)  # add 1 to start tiles at 1 instead of 0
             puzzle.append(line)
 
         # set the last sqaure to blank
         puzzle[puzzleSize - 1][puzzleSize - 1] = emptySquare
         return puzzle
 
-    def isPuzzleSolved(self):
-        return self.puzzle == self.getSolvedPuzzle()
+    def isPuzzleSolved(self, puzzle=None):
+        if not puzzle:  # allow caller to pass in puzzle config
+            puzzle = self.puzzle  # use class member if not supplied
+
+        return puzzle == self.getSolvedPuzzle()
 
     def scramblePuzzle(self, m):
         """
@@ -127,20 +135,23 @@ class Puzzle:
                 next = random.choice(neighbors)
 
             self.moveToEmptyCell(next)
-            print("Scramble: moved %d to empty cell" % next)
-            # self.print()
+            if debug:
+                print("Scramble: moved %d to empty cell" % next)
             lastMoved = next
 
         # return a copy for data collection (allows to use same scrambled puzzle for different configs)
         return self.puzzle.copy()
 
-    def print(self):
+    def print(self, puzzle=None):
         """
         Print the current configuration
         :return:
         """
+        if not puzzle:  # allow caller to pass in puzzle config
+            puzzle = self.puzzle  # use class member if not supplied
+
         str = ""
-        for row in self.puzzle:
+        for row in puzzle:
             for col in row:
                 if col == emptySquare:
                     str += "   "
@@ -149,89 +160,156 @@ class Puzzle:
             str += "\n"
         print(str)
 
-
-
-    def getPosition(self, target):
+    def getPosition(self, target, puzzle=None):
         """
         Return the row and col of the target number (or empty cell)
         :param target:
         :return:
         """
+        if not puzzle:  # allow caller to pass in puzzle config
+            puzzle = self.puzzle  # use class member if not supplied
+
         # TODO does using modulo or caching significantly help?
         for row in range(puzzleSize):
             for col in range(puzzleSize):
-                if self.puzzle[row][col] == target:
-                    return(row, col)
+                if puzzle[row][col] == target:
+                    return (row, col)
 
-    def getEmptyPosition(self):
+    def getEmptyPosition(self, puzzle=None):
         """
         Return the row and col where the empty square is
         :return:
         """
-        return self.getPosition(emptySquare)
+        if not puzzle:  # allow caller to pass in puzzle config
+            puzzle = self.puzzle  # use class member if not supplied
 
-    def getNeighbors(self, target):
+        return self.getPosition(emptySquare, puzzle)
+
+    def getNeighbors(self, target, puzzle=None):
         """
         Return neighbors of the given target (numbers that it can swap with)
         :param target:
         :return:
         """
-        row, col = self.getPosition(target)
+        if not puzzle:  # allow caller to pass in puzzle config
+            puzzle = self.puzzle  # use class member if not supplied
+
+        row, col = self.getPosition(target, puzzle)
 
         neighbors = []
         # up
         if row > 0:
-            neighbors.append(self.puzzle[row - 1][col])
+            neighbors.append(puzzle[row - 1][col])
         # left
         if col > 0:
-            neighbors.append(self.puzzle[row][col - 1])
+            neighbors.append(puzzle[row][col - 1])
         # right
         if col < puzzleSize - 1:
-            neighbors.append(self.puzzle[row][col + 1])
+            neighbors.append(puzzle[row][col + 1])
         # down
         if row < puzzleSize - 1:
-            neighbors.append(self.puzzle[row + 1][col])
+            neighbors.append(puzzle[row + 1][col])
 
         return neighbors
 
-    def moveToEmptyCell(self, target):
+    def moveToEmptyCell(self, target, puzzle=None):
         """
         Move the given number into the empty cell
         :param target:
         :return: True if moved, Exception if blocked
         """
-        neighbors = self.getNeighbors(target)
+        if not puzzle:  # allow caller to pass in puzzle config
+            puzzle = self.puzzle  # use class member if not supplied
+
+        neighbors = self.getNeighbors(target, puzzle)
         if emptySquare not in neighbors:
-            raise Exception("Target number %d is not adjacent to empty cell, cannot move")
+            raise Exception("Target number %d is not adjacent to empty cell, cannot move" % target)
 
         # if they are neighbors, swap the positions
-        tarRow, tarCol = self.getPosition(target)       # position of target number that is moving
-        empRow, empCol = self.getEmptyPosition()        # position of empty cell
+        tarRow, tarCol = self.getPosition(target, puzzle)  # position of target number that is moving
+        empRow, empCol = self.getEmptyPosition(puzzle)  # position of empty cell
 
-        self.puzzle[tarRow][tarCol] = emptySquare
-        self.puzzle[empRow][empCol] = target
+        puzzle[tarRow][tarCol] = emptySquare
+        puzzle[empRow][empCol] = target
 
         return True
 
-    def cityBlock(self):
+    def cityBlock(self, puzzle=None):
         """
-        City block heuristic: estimate number of cells
+        City block heuristic: estimate number of moves for each tile to intended location
+        This is admissible since it never over-estimates the number of moves
         :return:
         """
-        print('This is the cityBlock heuristic')
-        return 8
-        # raise Exception('TODO: Joe')
+        if not puzzle:  # allow caller to pass in puzzle config
+            puzzle = self.puzzle  # use class member if not supplied
 
-    def myHeuristic(self):
+        # for each tile, count the number of moves to its intended position (assume no other tiles)
+        sum = 0
+
+        for row in range(puzzleSize):
+            for col in range(puzzleSize):
+                # expected tile position (+1 because arrays start at 0, tiles start at 1)
+                expectedTile = row * puzzleSize + col + 1
+
+                # the last spot in the board is reserved for empty space, ignore for this heuristic
+                if expectedTile == (puzzleSize * puzzleSize):
+                    continue
+
+                # get location of expected tile and calculate distance (absolute in case it moves up/left)
+                actRow, actCol = self.getPosition(expectedTile, puzzle)
+                dist = abs(actRow - row) + abs(actCol - col)
+                if debug:
+                    print(
+                        f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
+
+                sum += dist
+
+        return sum
+
+    def myHeuristic(self, puzzle=None):
         """
-        TBD heuristic defined by us
+        Heuristic defined by us
+        Use the city block estimate plus the distance to the empty square
+        This is not admissible since it may over-estimate the number of moves
+        -i.e. if the give tile is one move away from its intended location and the emtpy square
+        is there, it only needs to move once (but this algo returns 2 for that tile)
         :return:
         """
-        print('This is my heuristic')
-        return 9
-        # raise Exception('TODO: Joe')
+        if not puzzle:  # allow caller to pass in puzzle config
+            puzzle = self.puzzle  # use class member if not supplied
 
-    def aStar(self, whichHeuristic, maxNodes=1000):
+        sum = 0
+        (emptyRow, emptyCol) = self.getEmptyPosition(puzzle)
+
+        for row in range(puzzleSize):
+            for col in range(puzzleSize):
+                # expected tile position (+1 because arrays start at 0, tiles start at 1)
+                expectedTile = row * puzzleSize + col + 1
+
+                # the last spot in the board is reserved for empty space, ignore for this heuristic
+                if expectedTile == (puzzleSize * puzzleSize):
+                    continue
+
+                # get location of expected tile and calculate distance (absolute in case it moves up/left)
+                actRow, actCol = self.getPosition(expectedTile, puzzle)
+                dist = abs(actRow - row) + abs(actCol - col)
+                if debug:
+                    print(
+                        f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
+
+                # if at correct spot, do not consider moving empty tile
+                if dist == 0:
+                    continue
+
+                # otherwise add distance to empty tile (this makes the algo not admissible)
+                emptyDist = abs(actRow - emptyRow) + abs(actCol - emptyCol)
+                if debug:
+                    print('myHeuristic moves from emtpy: %d' % emptyDist)
+                sum += dist + emptyDist
+
+        return sum
+
+    def aStar(self, puzzle, whichHeuristic, maxNodes=1000):
         """
         A* search
         :return: Number of nodes checked
@@ -239,20 +317,103 @@ class Puzzle:
         estimate = whichHeuristic()
         print('astar search with %s (estimate %d)' % (whichHeuristic.__name__, estimate))
         time.sleep(1)
-        #raise Exception('TODO: Wadood & Joe')
+        # raise Exception('TODO: Wadood & Joe')
         nodesChecked = 10
         return nodesChecked
 
-    def rbfs(self, whichHeuristic, maxNodes=1000):
+    def rbfs(self, puzzle, whichHeuristic, maxNodes=1000):
         """
         Recursive best first search
         :return: Number of nodes checked
         """
-        estimate = whichHeuristic()
-        print('rbfs search with %s (estimate %d)' % (whichHeuristic.__name__, estimate))
-        time.sleep(2)
-        #raise Exception('TODO: Matthew')
-        nodesChecked = 20
-        return nodesChecked
+        print('rbfs for %s' % puzzle)  # self.print(puzzle))
+        (solution, fValue) = self.rbfsMain(puzzle, float('inf'), whichHeuristic, 0)
+        print('\tsoln %s\n\tmoves %d' % (solution, fValue))
+        # return (solution, fValue)
+        return fValue
+
+    def rbfsMain(self, node, fLimit, whichHeuristic, nodeCount):
+        """
+
+        :param puzzle:
+        :param node:
+        :param fLimit:
+        :param whichHeuristic:
+        :return:
+        """
+        # see page 93 in book
+        if self.isPuzzleSolved(node):
+            # raise Exception('solved')
+            return node, nodeCount
+
+        successorNodes = self.generateNodes(node)
+        if not successorNodes:
+            return (False, float('inf'))
+
+        q = SuccessorQueue()
+        for successorNode in successorNodes:
+            if self.isPuzzleSolved(successorNode):
+                # raise Exception('blah %d' % nodeCount + 1)
+                return successorNode, nodeCount + 1
+            estimate = max(nodeCount + whichHeuristic(successorNode), nodeCount)
+            id = self.getPuzzleId(successorNode)
+            q.put((estimate, id, successorNode))
+
+        while True:
+            (bestF, id, bestNode) = q.get()
+            if bestF > fLimit:
+                return False, bestF
+
+            (altF, id, altNode) = q.get()
+            nextF = min(fLimit, altF)
+            nodeCount += len(successorNodes)
+            result, bestF = self.rbfsMain(bestNode, nextF, whichHeuristic, nodeCount + 1)
+            if result:
+                return result, bestF
+
+    def generateNodes(self, puzzle=None):
+        """
+        Using the current configuration, generate 1 node for each direction the empty square can move
+        This will generate 2-4 nodes
+        :param self:
+        :return:
+        """
+        if not puzzle:  # allow caller to pass in puzzle config
+            puzzle = self.puzzle  # use class member if not supplied
+
+        nodes = []
+        currPuzzle = puzzle.copy()
+        neighbors = self.getNeighbors(emptySquare, puzzle)
+        for neighbor in neighbors:
+            node = copy.deepcopy(currPuzzle)
+            self.moveToEmptyCell(neighbor, node)
+            nodes.append(node)
+
+        return nodes
+
+    def getPuzzleId(self, puzzle):
+        """
+        Calculate a unique id for the given puzzle. This is needed for the rbfs prioirity queue
+        if two nodes have the same fValue.
+        This routine multiplies every existing tile against the expected tile in the solved puzzle.
+        As long as two puzzles are different, this number should be different.
+        :param puzzle:
+        :return:
+        """
+        sum = 0
+        for row in range(puzzleSize):
+            for col in range(puzzleSize):
+                # expected tile position (+1 because arrays start at 0, tiles start at 1)
+                expectedTile = row * puzzleSize + col + 1
+                actualTile = puzzle[row][col]
+                if actualTile == emptySquare:  # ignore empty square
+                    continue
+                sum += expectedTile * actualTile
+
+        return sum
 
 
+class SuccessorQueue(PriorityQueue):
+    def __eq__(self, other):
+        a = 1
+        return -1
