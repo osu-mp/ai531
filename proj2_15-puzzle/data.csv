@@ -1,6 +1,16 @@
 m,puzzleNum,searchFunc,heuristic,moves,nodesChecked,runTime (seconds)
-10,0,rbfs,cityBlock,2,2,0.0010380744934082031
-10,1,rbfs,cityBlock,4,4,0.0009989738464355469
-10,2,rbfs,cityBlock,6,6,0.0019981861114501953
-10,3,rbfs,cityBlock,2,2,0.001001119613647461
-10,4,rbfs,cityBlock,0,0,0.0
+10,0,astar,cityBlock,6,14,0.0
+10,1,astar,cityBlock,4,11,0.0010073184967041016
+10,2,astar,cityBlock,6,17,0.00099945068359375
+10,3,astar,cityBlock,2,6,0.0010001659393310547
+10,4,astar,cityBlock,4,11,0.0009982585906982422
+10,0,astar,myHeuristic,6,18,0.0009984970092773438
+10,1,astar,myHeuristic,4,11,0.0
+10,2,astar,myHeuristic,6,17,0.0009992122650146484
+10,3,astar,myHeuristic,2,6,0.0
+10,4,astar,myHeuristic,4,11,0.0009989738464355469
+10,0,rbfs,cityBlock,6,6,0.0020003318786621094
+10,1,rbfs,cityBlock,4,4,0.0009920597076416016
+10,2,rbfs,cityBlock,6,6,0.0020003318786621094
+10,3,rbfs,cityBlock,2,2,0.0010023117065429688
+10,4,rbfs,cityBlock,4,4,0.0009999275207519531
