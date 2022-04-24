@@ -232,6 +232,9 @@ class Puzzle:
         puzzle[tarRow][tarCol] = emptySquare
         puzzle[empRow][empCol] = target
 
+        if debug:
+            print('\tSwapped with empty: %d' % target)
+
         return True
 
     def cityBlock(self, puzzle=None):
@@ -326,12 +329,13 @@ class Puzzle:
         :return: Number of nodes checked
         """
         self.maxNodes = maxNodes
-        self.frontier = SuccessorQueue()
+        self.frontier = PriorityQueue()
+        self.frontierIds = {}
 
         print('rbfs for %s' % puzzle)#self.print(puzzle))
         (solution, fValue) = self.rbfsMain(puzzle, maxsize, whichHeuristic, 0)
         if solution:
-            print('\tsoln %s\n\tcost %d' % (solution, fValue))
+            print('\tsoln %s\n\tfValue %d' % (solution, fValue))
         else:
             print('\tNo solution found in %d moves' % fValue)
         return (solution, fValue)
@@ -348,52 +352,60 @@ class Puzzle:
         """
         if debug:
             print('\n')
-            print('rbfsMain: fLimit = %d, count = %d' % (fLimit, nodeCount))
+            print('rbfsMain: fLimit = %d, nodeCount = %d' % (fLimit, nodeCount))
             print('\tnode=%s' % node)
+
+        # if puzzle is solved, exit
+        if self.isPuzzleSolved(node):
+            if debug:
+                print('Solved1: fLimit = %d' % fLimit)
+                print('\tsoln1 %s' % node)
+            return (node, fLimit)
 
         # max nodes are checked, exit
         if nodeCount > self.maxNodes:
             print('Max node depth exceeded (%d > %d)' % (nodeCount, self.maxNodes))
             return (None, maxsize)
 
-        # if puzzle is solved, exit
-        if self.isPuzzleSolved(node):
-            if debug:
-                print('Solved1: nodeCount = %d' % nodeCount)
-                print('\tsoln1 %s' % node)
-            return (node, nodeCount)
-
         nodeCount -= 1
 
         # generate child nodes off parent (2-4 places the empty tile can move)
         successorNodes = self.generateNodes(node)
+
         # if no child nodes generated, return
         if not successorNodes:
             return (None, maxsize)
 
         # add the child nodes to the frontier
         for successorNode in successorNodes:
-            nodeCount += 1
-            # if self.isPuzzleSolved(successorNode):
-            #     # raise Exception('blah %d' % nodeCount + 1)
+            # nodeCount += 1
+            if self.isPuzzleSolved(successorNode):
+                return successorNode, fLimit
             #     if debug:
             #         print('Solved2: nodeCount = %d' % nodeCount)
             #         print('\tsoln2 %s' % successorNode)
             #         raise Exception('matt')
             #     return successorNode, nodeCount
-            estimate = max(nodeCount + whichHeuristic(successorNode), nodeCount)
+            # estimate = max(nodeCount + whichHeuristic(successorNode), nodeCount)
+            # use the heuristic to estimate cost to goal
+            estimate = whichHeuristic(successorNode)
+            # id is used to keep distinct entries in priority queue (if two nodes have same estimate)
             id = self.getPuzzleId(successorNode)
 
             if debug:
                 print('Successor:: est=%d, id=%d, puzzle=%s' % (estimate, id, successorNode))
 
+            # order the frontier by estimate first, id second
             # the 'id' is used for the queue to distinguish between nodes with the same heuristic value
             self.frontier.put((estimate, id, successorNode))
+
+            self.frontierIds[id] = 1
 
         nodeCount += len(successorNodes)
 
         while not self.frontier.empty():
             (bestF, id, bestNode) = self.frontier.get()
+            del self.frontierIds[id]
             if debug:
                 print('best f: %d, node %s' % (bestF, bestNode))
 
@@ -412,10 +424,10 @@ class Puzzle:
                 if debug:
                     print('Solved3: nodeCount = %d' % nodeCount)
                     print('\tsoln3 %s' % node)
-
+                return (result, bestF)
                 # return result, bestF
-                break
-        return (result, nodeCount)
+                # break
+        return (result, fLimit)
             #raise Exception('matt')
 
     def generateNodes(self, puzzle=None):
@@ -459,10 +471,7 @@ class Puzzle:
 
         return sum
 
-class SuccessorQueue(PriorityQueue):
-    def __eq__(self, other):
-        a = 1
-        return -1
+#class SuccessorQueue(PriorityQueue):
 
 
 class TestPuzzle(unittest.TestCase):
@@ -731,17 +740,21 @@ class TestPuzzle(unittest.TestCase):
         puzzle = Puzzle()
         puzzle.moveToEmptyCell(12)
         puzzle.moveToEmptyCell(11)
-        puzzle.moveToEmptyCell(15)
-        puzzle.moveToEmptyCell(14)
-        puzzle.moveToEmptyCell(10)
-        puzzle.moveToEmptyCell(9)
-        puzzle.moveToEmptyCell(13)
+        # puzzle.moveToEmptyCell(15)
+        # puzzle.moveToEmptyCell(14)
+        # puzzle.moveToEmptyCell(10)
+        # puzzle.moveToEmptyCell(9)
+        # puzzle.moveToEmptyCell(13)
         # puzzle.moveToEmptyCell(10)
         # puzzle.moveToEmptyCell(14)
         # puzzle.moveToEmptyCell(15)
-        (result, nodeCount) = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock, maxNodes=1000)
+        (result, fLimit) = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock, maxNodes=1000)
         self.assertTrue(puzzle.isPuzzleSolved(result))
-        self.assertTrue(nodeCount < 1000)
+        # self.assertEqual(7, fLimit)
+
+        puzzle.scramblePuzzle(11)
+        (result, fLimit) = puzzle.rbfs(puzzle.puzzle, puzzle.cityBlock, maxNodes=1000)
+        self.assertTrue(puzzle.isPuzzleSolved(result))
 
     def test_rbfs(self):
         # run simple test for now
