@@ -1,0 +1,6 @@
+m,puzzleNum,searchFunc,heuristic,moves,nodesChecked,runTime (seconds)
+10,0,rbfs,cityBlock,2,2,0.0010380744934082031
+10,1,rbfs,cityBlock,4,4,0.0009989738464355469
+10,2,rbfs,cityBlock,6,6,0.0019981861114501953
+10,3,rbfs,cityBlock,2,2,0.001001119613647461
+10,4,rbfs,cityBlock,0,0,0.0

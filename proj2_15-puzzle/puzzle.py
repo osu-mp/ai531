@@ -1,4 +1,4 @@
-#!/us#!/usr/bin/python3
+#!/usr/bin/python3
 
 # AI 531 - Project 2 - 15 Puzzle
 # Wadood Alam
@@ -12,29 +12,7 @@ import time
 import unittest
 
 from queue import PriorityQueue
-
-"""
-TODO: Define classes/tests
-Heuristic: City Block
-Heuristic: MY: Any other heuristic (>= CB) that you can come up with that performs better in terms of the number of nodes searched by one or both of the algorithms. This heuristic may or may not be admissible.
-
-Helpers:
-scramble(goal, m): given a valid board, scramble by m moves (watch out for moves that cancel each other out, e.g. up followed by down)
-timer: time how long a function takes
-correctCount: return how many numbers are in their correct cell
-distanceFromEmpty: return 
-
-Searches:
-generic:    count number of nodes searched? 
-            set some max node threshold?
-            set some max time threshold?
-aStar:
-RBFS
-
-Min Heap walkthrough: https://www.geeksforgeeks.org/min-heap-in-python/
-A* algo 
-
-"""
+from sys import maxsize
 
 """
 Assignment Description
@@ -66,28 +44,39 @@ For each m, plot the average time consumed, nodes searched, and the optimal solu
 
 emptySquare = '_'
 puzzleSize = 4  # number of rows and cols for puzzle (4 means 4x4 grid with 15 numbers and one emtpy cell)
-collectData = False  # set to True to generate test data (long runtime)
+collectData = True  # set to True to generate test data (long runtime)
 maxNodes = 1000  # TODO tune to a sensible value
 csvFilename = 'data.csv'  # where test runtimes are written
 debug = False  # prints debug messages when enabled
+maxNodesPerSearch = 100
+moveL = 'L'  # movement the empty tile can do: left, right, up, down
+moveR = 'R'  # if tile is on an edge, some movements will not be allowed
+moveU = 'U'
+moveD = 'D'
 
 
 class Puzzle:
-    def __init__(self):
-        self.puzzleSize = puzzleSize
-        self.puzzle = self.getSolvedPuzzle()
+    totalNodes = 0  # global counter of total nodes in total tree
 
-    def graphPuzzle(self):
-        """
+    def __init__(self, tiles=None, parent=None, move=None, cost=0):
+        # self.puzzle = self.getSolvedPuzzle()
+        self.tiles = tiles  # state of all tiles (2D array)
+        self.parent = parent  # parent node of this puzzle (None=root node)
+        self.move = move  # direction the empty tile was moved to get here (from parent)
 
-        :return:
-        """
-        '''
-        16 nodes: e.g. 1 connected to 2 and 5, 
-        
-        Use heap: 
-        '''
-        pass
+        if parent:
+            self.cost = parent.cost + cost
+        else:
+            self.cost = cost
+
+        if debug:
+            print('New node: move=%s, cost=%s' % (self.move, self.cost))
+
+        if not tiles:
+            self.tiles = self.getSolvedPuzzle()
+
+        self.evalFunc = self.cost  #
+        Puzzle.totalNodes += 1
 
     def getSolvedPuzzle(self):
         """
@@ -110,11 +99,8 @@ class Puzzle:
         puzzle[puzzleSize - 1][puzzleSize - 1] = emptySquare
         return puzzle
 
-    def isPuzzleSolved(self, puzzle=None):
-        if not puzzle:  # allow caller to pass in puzzle config
-            puzzle = self.puzzle  # use class member if not supplied
-
-        return puzzle == self.getSolvedPuzzle()
+    def isPuzzleSolved(self):
+        return self.tiles == self.getSolvedPuzzle()
 
     def scramblePuzzle(self, m):
         """
@@ -122,36 +108,35 @@ class Puzzle:
         :param m: Number of moves to scramble puzzle
         :return: Nothing (self.puzzle is now scrambled)
         """
-        lastMoved = None
+        lastMove = None
+        moves = []
         for i in range(m):
-            # get neighbors of empty cell
-            neighbors = self.getNeighbors(emptySquare)
+            # get possible move directions
+            possibleMoves = self.getEmptyMoves()
 
-            # pick a random number from those
-            next = random.choice(neighbors)
+            # pick a random move from those
+            nextMove = random.choice(possibleMoves)
 
             # as long as it is not 'last' move it
-            while next == lastMoved:
-                next = random.choice(neighbors)
+            while nextMove == lastMove:
+                nextMove = random.choice(possibleMoves)
 
-            self.moveToEmptyCell(next)
-            if debug:
-                print("Scramble: moved %d to empty cell" % next)
-            lastMoved = next
+            self.moveEmpty(nextMove)
 
-        # return a copy for data collection (allows to use same scrambled puzzle for different configs)
-        return self.puzzle.copy()
+            lastMoved = nextMove
+            moves.append(nextMove)
 
-    def print(self, puzzle=None):
+        if debug:
+            print('Scrambled %d moves: %s' % (len(moves), ', '.join(moves)))
+        return moves
+
+    def print(self):
         """
         Print the current configuration
         :return:
         """
-        if not puzzle:  # allow caller to pass in puzzle config
-            puzzle = self.puzzle  # use class member if not supplied
-
         str = ""
-        for row in puzzle:
+        for row in self.tiles:
             for col in row:
                 if col == emptySquare:
                     str += "   "
@@ -160,236 +145,147 @@ class Puzzle:
             str += "\n"
         print(str)
 
-    def getPosition(self, target, puzzle=None):
+    def getPosition(self, target):
         """
         Return the row and col of the target number (or empty cell)
         :param target:
         :return:
         """
-        if not puzzle:  # allow caller to pass in puzzle config
-            puzzle = self.puzzle  # use class member if not supplied
-
-        # TODO does using modulo or caching significantly help?
         for row in range(puzzleSize):
             for col in range(puzzleSize):
-                if puzzle[row][col] == target:
+                if self.tiles[row][col] == target:
                     return (row, col)
 
-    def getEmptyPosition(self, puzzle=None):
+    def getEmptyPosition(self):
         """
         Return the row and col where the empty square is
         :return:
         """
-        if not puzzle:  # allow caller to pass in puzzle config
-            puzzle = self.puzzle  # use class member if not supplied
+        return self.getPosition(emptySquare)
 
-        return self.getPosition(emptySquare, puzzle)
-
-    def getNeighbors(self, target, puzzle=None):
+    def getNeighbors(self, target):
         """
         Return neighbors of the given target (numbers that it can swap with)
         :param target:
         :return:
         """
-        if not puzzle:  # allow caller to pass in puzzle config
-            puzzle = self.puzzle  # use class member if not supplied
-
-        row, col = self.getPosition(target, puzzle)
+        row, col = self.getPosition(target)
 
         neighbors = []
         # up
         if row > 0:
-            neighbors.append(puzzle[row - 1][col])
+            neighbors.append(self.tiles[row - 1][col])
         # left
         if col > 0:
-            neighbors.append(puzzle[row][col - 1])
+            neighbors.append(self.tiles[row][col - 1])
         # right
         if col < puzzleSize - 1:
-            neighbors.append(puzzle[row][col + 1])
+            neighbors.append(self.tiles[row][col + 1])
         # down
         if row < puzzleSize - 1:
-            neighbors.append(puzzle[row + 1][col])
+            neighbors.append(self.tiles[row + 1][col])
 
         return neighbors
 
-    def moveToEmptyCell(self, target, puzzle=None):
+    def getEmptyMoves(self):
+        """
+        Return the legal positions that the empty tile can move
+        :return:
+        """
+        row, col = self.getEmptyPosition()
+
+        moves = []
+        if row > 0:  # up
+            moves.append(moveU)
+        if col > 0:  # left
+            moves.append(moveL)
+        if col < puzzleSize - 1:  # right
+            moves.append(moveR)
+        if row < puzzleSize - 1:  # down
+            moves.append(moveD)
+
+        return moves
+
+    def moveEmpty(self, move):
+        """
+        Move the empty square up, left, right, or down (swap values with numbered tile)
+        :param move:
+        :return:
+        """
+        row, col = self.getEmptyPosition()
+
+        # replace the numbered tile in place of the empty
+        if move == moveU:  # up
+            self.tiles[row][col] = self.tiles[row - 1][col]
+            row -= 1
+        elif move == moveL:  # left
+            self.tiles[row][col] = self.tiles[row][col - 1]
+            col -= 1
+        elif move == moveR:  # right
+            self.tiles[row][col] = self.tiles[row][col + 1]
+            col += 1
+        elif move == moveD:  # down
+            self.tiles[row][col] = self.tiles[row + 1][col]
+            row += 1
+
+        # put the empty square where the numbered tile previously was
+        self.tiles[row][col] = emptySquare
+
+    def moveToEmptyCell(self, target):
         """
         Move the given number into the empty cell
         :param target:
         :return: True if moved, Exception if blocked
         """
-        if not puzzle:  # allow caller to pass in puzzle config
-            puzzle = self.puzzle  # use class member if not supplied
-
-        neighbors = self.getNeighbors(target, puzzle)
+        neighbors = self.getNeighbors(target)
         if emptySquare not in neighbors:
             raise Exception("Target number %d is not adjacent to empty cell, cannot move" % target)
 
         # if they are neighbors, swap the positions
-        tarRow, tarCol = self.getPosition(target, puzzle)  # position of target number that is moving
-        empRow, empCol = self.getEmptyPosition(puzzle)  # position of empty cell
+        tarRow, tarCol = self.getPosition(target)  # position of target number that is moving
+        empRow, empCol = self.getEmptyPosition()  # position of empty cell
 
-        puzzle[tarRow][tarCol] = emptySquare
-        puzzle[empRow][empCol] = target
+        self.tiles[tarRow][tarCol] = emptySquare
+        self.tiles[empRow][empCol] = target
 
         return True
 
-    def cityBlock(self, puzzle=None):
+    def generateChildren(self):
         """
-        City block heuristic: estimate number of moves for each tile to intended location
-        This is admissible since it never over-estimates the number of moves
+        Generate valid children tile configurations given the current tiles
+        One child node for each direction the empty square can move
         :return:
         """
-        if not puzzle:  # allow caller to pass in puzzle config
-            puzzle = self.puzzle  # use class member if not supplied
+        children = []
 
-        # for each tile, count the number of moves to its intended position (assume no other tiles)
-        sum = 0
+        moves = self.getEmptyMoves()
+        for move in moves:
+            # copy tiles into new child node
+            tiles = copy.deepcopy(self.tiles)
+            child = Puzzle(tiles, self, move, 1)
+            # move the empty square in the child node
+            child.moveEmpty(move)
+            children.append(child)
 
-        for row in range(puzzleSize):
-            for col in range(puzzleSize):
-                # expected tile position (+1 because arrays start at 0, tiles start at 1)
-                expectedTile = row * puzzleSize + col + 1
+        return children
 
-                # the last spot in the board is reserved for empty space, ignore for this heuristic
-                if expectedTile == (puzzleSize * puzzleSize):
-                    continue
-
-                # get location of expected tile and calculate distance (absolute in case it moves up/left)
-                actRow, actCol = self.getPosition(expectedTile, puzzle)
-                dist = abs(actRow - row) + abs(actCol - col)
-                if debug:
-                    print(
-                        f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
-
-                sum += dist
-
-        return sum
-
-    def myHeuristic(self, puzzle=None):
+    def printSolution(self):
         """
-        Heuristic defined by us
-        Use the city block estimate plus the distance to the empty square
-        This is not admissible since it may over-estimate the number of moves
-        -i.e. if the give tile is one move away from its intended location and the emtpy square
-        is there, it only needs to move once (but this algo returns 2 for that tile)
+        Print the moves to get here from initial setup (reverse the parent moves)
         :return:
         """
-        if not puzzle:  # allow caller to pass in puzzle config
-            puzzle = self.puzzle  # use class member if not supplied
+        moves = []
+        moves.append(self.move)  # TODO: is this needed at root?
+        path = self
+        while path.parent != None:
+            path = path.parent
+            moves.append(path.move)
+        moves = moves[:-1]
+        moves.reverse()
 
-        sum = 0
-        (emptyRow, emptyCol) = self.getEmptyPosition(puzzle)
-
-        for row in range(puzzleSize):
-            for col in range(puzzleSize):
-                # expected tile position (+1 because arrays start at 0, tiles start at 1)
-                expectedTile = row * puzzleSize + col + 1
-
-                # the last spot in the board is reserved for empty space, ignore for this heuristic
-                if expectedTile == (puzzleSize * puzzleSize):
-                    continue
-
-                # get location of expected tile and calculate distance (absolute in case it moves up/left)
-                actRow, actCol = self.getPosition(expectedTile, puzzle)
-                dist = abs(actRow - row) + abs(actCol - col)
-                if debug:
-                    print(
-                        f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
-
-                # if at correct spot, do not consider moving empty tile
-                if dist == 0:
-                    continue
-
-                # otherwise add distance to empty tile (this makes the algo not admissible)
-                emptyDist = abs(actRow - emptyRow) + abs(actCol - emptyCol)
-                if debug:
-                    print('myHeuristic moves from emtpy: %d' % emptyDist)
-                sum += dist + emptyDist
-
-        return sum
-
-    def aStar(self, puzzle, whichHeuristic, maxNodes=1000):
-        """
-        A* search
-        :return: Number of nodes checked
-        """
-        estimate = whichHeuristic()
-        print('astar search with %s (estimate %d)' % (whichHeuristic.__name__, estimate))
-        time.sleep(1)
-        # raise Exception('TODO: Wadood & Joe')
-        nodesChecked = 10
-        return nodesChecked
-
-    def rbfs(self, puzzle, whichHeuristic, maxNodes=1000):
-        """
-        Recursive best first search
-        :return: Number of nodes checked
-        """
-        print('rbfs for %s' % puzzle)  # self.print(puzzle))
-        (solution, fValue) = self.rbfsMain(puzzle, float('inf'), whichHeuristic, 0)
-        print('\tsoln %s\n\tmoves %d' % (solution, fValue))
-        # return (solution, fValue)
-        return fValue
-
-    def rbfsMain(self, node, fLimit, whichHeuristic, nodeCount):
-        """
-
-        :param puzzle:
-        :param node:
-        :param fLimit:
-        :param whichHeuristic:
-        :return:
-        """
-        # see page 93 in book
-        if self.isPuzzleSolved(node):
-            # raise Exception('solved')
-            return node, nodeCount
-
-        successorNodes = self.generateNodes(node)
-        if not successorNodes:
-            return (False, float('inf'))
-
-        q = SuccessorQueue()
-        for successorNode in successorNodes:
-            if self.isPuzzleSolved(successorNode):
-                # raise Exception('blah %d' % nodeCount + 1)
-                return successorNode, nodeCount + 1
-            estimate = max(nodeCount + whichHeuristic(successorNode), nodeCount)
-            id = self.getPuzzleId(successorNode)
-            q.put((estimate, id, successorNode))
-
-        while True:
-            (bestF, id, bestNode) = q.get()
-            if bestF > fLimit:
-                return False, bestF
-
-            (altF, id, altNode) = q.get()
-            nextF = min(fLimit, altF)
-            nodeCount += len(successorNodes)
-            result, bestF = self.rbfsMain(bestNode, nextF, whichHeuristic, nodeCount + 1)
-            if result:
-                return result, bestF
-
-    def generateNodes(self, puzzle=None):
-        """
-        Using the current configuration, generate 1 node for each direction the empty square can move
-        This will generate 2-4 nodes
-        :param self:
-        :return:
-        """
-        if not puzzle:  # allow caller to pass in puzzle config
-            puzzle = self.puzzle  # use class member if not supplied
-
-        nodes = []
-        currPuzzle = puzzle.copy()
-        neighbors = self.getNeighbors(emptySquare, puzzle)
-        for neighbor in neighbors:
-            node = copy.deepcopy(currPuzzle)
-            self.moveToEmptyCell(neighbor, node)
-            nodes.append(node)
-
-        return nodes
+        moveStr = ", ".join(moves)
+        # TODO include length
+        print("Solution: %s" % moveStr)
 
     def getPuzzleId(self, puzzle):
         """
@@ -413,7 +309,158 @@ class Puzzle:
         return sum
 
 
-class SuccessorQueue(PriorityQueue):
-    def __eq__(self, other):
-        a = 1
-        return -1
+def heuristicCityBlock(puzzle):
+    """
+    City block heuristic: estimate number of moves for each tile to intended location
+    This is admissible since it never over-estimates the number of moves
+    :return:
+    """
+    # for each tile, count the number of moves to its intended position (assume no other tiles)
+    sum = 0
+
+    for row in range(puzzleSize):
+        for col in range(puzzleSize):
+            # expected tile position (+1 because arrays start at 0, tiles start at 1)
+            expectedTile = row * puzzleSize + col + 1
+
+            # the last spot in the board is reserved for empty space, ignore for this heuristic
+            if expectedTile == (puzzleSize * puzzleSize):
+                continue
+
+            # get location of expected tile and calculate distance (absolute in case it moves up/left)
+            actRow, actCol = puzzle.getPosition(expectedTile)
+            dist = abs(actRow - row) + abs(actCol - col)
+            # if debug:
+            #     print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
+
+            sum += dist
+
+    return sum
+
+
+def heuristicMy(puzzle):
+    """
+    Heuristic defined by us
+    Use the city block estimate plus the distance to the empty square
+    This is not admissible since it may over-estimate the number of moves
+    -i.e. if the give tile is one move away from its intended location and the emtpy square
+    is there, it only needs to move once (but this algo returns 2 for that tile)
+    :return:
+    """
+    sum = 0
+    (emptyRow, emptyCol) = puzzle.getEmptyPosition()
+
+    for row in range(puzzleSize):
+        for col in range(puzzleSize):
+            # expected tile position (+1 because arrays start at 0, tiles start at 1)
+            expectedTile = row * puzzleSize + col + 1
+
+            # the last spot in the board is reserved for empty space, ignore for this heuristic
+            if expectedTile == (puzzleSize * puzzleSize):
+                continue
+
+            # get location of expected tile and calculate distance (absolute in case it moves up/left)
+            actRow, actCol = puzzle.getPosition(expectedTile)
+            dist = abs(actRow - row) + abs(actCol - col)
+            if debug:
+                print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
+
+            # if at correct spot, do not consider moving empty tile
+            if dist == 0:
+                continue
+
+            # otherwise add distance to empty tile (this makes the algo not admissible)
+            emptyDist = abs(actRow - emptyRow) + abs(actCol - emptyCol)
+            if debug:
+                print('myHeuristic moves from emtpy: %d' % emptyDist)
+            sum += dist + emptyDist
+
+    return sum
+
+
+def aStar(tiles, whichHeuristic):
+    """
+    A* search
+    :return: Number of nodes checked
+    """
+    global nodesChecked
+    nodesChecked = 0
+
+    estimate = whichHeuristic()
+    print('astar search with %s (estimate %d)' % (whichHeuristic.__name__, estimate))
+    time.sleep(1)
+    # raise Exception('TODO: Wadood & Joe')
+    node = None  # child node that solves puzzle
+    fLimit = 0  # final fLimit of search (TODO does this apply to astar?)
+    nodesChecked = 10
+    return (node, fLimit, nodesChecked)
+
+
+nodesChecked = 0  # global var to keep track of nodes checked (both searches should reset at start)
+count = 0  # applies to rbfs, TODO: does this apply to astar
+
+
+def rbfs(tiles, whichHeuristic):
+    global count, nodesChecked
+
+    count = 0
+    nodesChecked = 0
+
+    puzzle = Puzzle(tiles, None, None, 0)
+    (node, fLimit) = rbfsMain(puzzle, maxsize, whichHeuristic)
+    if node:
+        node.printSolution()
+        return (node, fLimit, nodesChecked)
+    else:
+        print("No solution found")
+        return (None, maxsize, nodesChecked)
+
+
+def rbfsMain(node, fLimit, whichHeuristic):
+    global count, nodesChecked
+
+    if node.isPuzzleSolved():
+        return node, None
+
+    nodesChecked += 1
+    if nodesChecked > maxNodesPerSearch:
+        print('Max nodes exceeded, terminating search. Nodes checked: %d' % nodesChecked)
+        return None, fLimit
+
+    if debug:
+        print('rbfsMain flimit=%d, move=%s:' % (fLimit, node.move))
+        node.print()
+    successors = PriorityQueue()
+    children = node.generateChildren()
+    if not children:
+        return None, maxsize
+
+    count -= 1
+
+    for child in children:
+        count += 1
+        estimate = child.cost + whichHeuristic(child)
+        # successors.append((estimate, count, child))
+        successors.put((estimate, count, child))
+
+        if debug:
+            print("\t%s estimate = %d, cost = %d" % (child.move, estimate, child.cost))
+            child.print()
+
+    while successors:
+        # successors.sort()
+        # bestNode = successors[0][2]
+        (bestF, bestCount, bestNode) = successors.get()
+        if bestNode.evalFunc > fLimit:
+            return None, bestNode.cost
+
+        # altF = successors[1][0]
+        (altF, altCount, altNode) = successors.get()
+        minF = min(fLimit, altF)
+
+        (result, bestNode.evalFunc) = rbfsMain(bestNode, minF, whichHeuristic)
+        # successors[0] = (bestNode.evalFunc, successors[0][1], bestNode)
+
+        if result:
+            break
+    return result, None
