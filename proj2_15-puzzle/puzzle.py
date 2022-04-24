@@ -6,10 +6,7 @@
 # Matthew Pacey
 
 import copy
-import csv
 import random
-import time
-import unittest
 
 from queue import PriorityQueue
 from sys import maxsize
@@ -377,12 +374,13 @@ def heuristicMy(puzzle):
 
     return sum
 
+
 def aStar(tiles, whichHeuristic):
     """
     A* search
     :return: Number of nodes checked
     """
-    global  count
+    global count
     count = 0
     node = None
     expanded = []
@@ -410,12 +408,13 @@ def aStar(tiles, whichHeuristic):
                 estimate = whichHeuristic(child)
                 Q.put((estimate, count, child))
 
-
     # print('astar search with %s (estimate %d)' % (whichHeuristic.__name__, estimate))
     # return
 
-nodesChecked = 0                                # global var to keep track of nodes checked (both searches should reset at start)
-count = 0                                       # applies to rbfs, TODO: does this apply to astar
+
+nodesChecked = 0  # global var to keep track of nodes checked (both searches should reset at start)
+count = 0  # applies to rbfs, TODO: does this apply to astar
+
 
 def rbfs(tiles, whichHeuristic):
     global count, nodesChecked
@@ -431,6 +430,7 @@ def rbfs(tiles, whichHeuristic):
     else:
         print("No solution found")
         return (None, maxsize, nodesChecked)
+
 
 def rbfsMain(node, fLimit, whichHeuristic):
     global count, nodesChecked
@@ -493,4 +493,3 @@ def rbfsMain(node, fLimit, whichHeuristic):
         if result:
             break
     return result, None
-

@@ -2,7 +2,7 @@ import csv
 import time
 import unittest
 
-from puzzle import Puzzle, emptySquare, collectData, csvFilename, rbfs, heuristicCityBlock, heuristicMy
+from puzzle import Puzzle, emptySquare, collectData, csvFilename, rbfs, heuristicCityBlock, heuristicMy, aStar
 
 
 class TestPuzzle(unittest.TestCase):
@@ -297,6 +297,38 @@ class TestPuzzle(unittest.TestCase):
         expected += (1 + 2) + (1 + 3) + (1 + 2) + (1 + 3) + (2 + 2) + 0 + (2 + 4)
         #            9         10        11       12        13        14   15
         self.assertEqual(expected, heuristicMy(puzzle))
+
+    def test_astar(self):
+        """
+        Functional tests for Sstar search algo
+        :return:
+        """
+        # base case: already solved puzzle (0 moves)
+        puzzle = Puzzle()
+        (node, fLimit, count) = aStar(puzzle.tiles, heuristicCityBlock)
+        print('node %s' % node)
+        self.assertEqual(0, node.cost)
+
+        # simple case: puzzle off by one move
+        puzzle = Puzzle()
+        puzzle.moveToEmptyCell(15)
+        print("Solving puzzle below")
+        puzzle.print()
+        (node, fLimit, count) = aStar(puzzle.tiles, heuristicCityBlock)
+        if node:
+            print('Solved with cost %d' % node.cost)
+        self.assertEqual(1, node.cost)
+
+        # simple case: puzzle off by 2 moves
+        puzzle = Puzzle()
+        puzzle.moveToEmptyCell(15)
+        puzzle.moveToEmptyCell(11)
+        print("Solving puzzle below")
+        puzzle.print()
+        (node, fLimit, count) = aStar(puzzle.tiles, heuristicCityBlock)
+        if node:
+            print('Solved with cost %d' % node.cost)
+        self.assertEqual(2, node.cost)
 
 
 if __name__ == '__main__':
