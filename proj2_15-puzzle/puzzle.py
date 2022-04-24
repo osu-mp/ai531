@@ -382,17 +382,38 @@ def aStar(tiles, whichHeuristic):
     A* search
     :return: Number of nodes checked
     """
-    global nodesChecked
-    nodesChecked = 0
+    global  count
+    count = 0
+    node = None 
+    expanded = []
+    Q = PriorityQueue()
+    # get parent node
+    parentNode = Puzzle(tiles, None, None, 0)
+    # Get huristic value in var 'estimate'
+    estimate = whichHeuristic(parentNode)
+    # put the parent node, node count, and heuristic value in the queue
+    Q.put((estimate,count, parentNode))
+    
+    while not Q.empty():
+        node = Q.get()
+        node = node[2]
+        
+        # append the expanded list with the state of the variable 'node'. Unbale to do so, idk why?
+        expanded.append(node.tiles())
+        if node.isPuzzleSolved():
+            return node, None
+        children = node.generateChildren()
 
-    estimate = whichHeuristic()
+        for child in children:
+            if child.tiles() not in expanded:
+                count += 1
+                # get new F value
+                estimate = whichHeuristic(child)
+                Q.put(estimate, count, child)
+
+    
     print('astar search with %s (estimate %d)' % (whichHeuristic.__name__, estimate))
-    time.sleep(1)
-    #raise Exception('TODO: Wadood & Joe')
-    node = None                                 # child node that solves puzzle
-    fLimit = 0                                  # final fLimit of search (TODO does this apply to astar?)
-    nodesChecked = 10
-    return (node, fLimit, nodesChecked)
+    return 
 
 nodesChecked = 0                                # global var to keep track of nodes checked (both searches should reset at start)
 count = 0                                       # applies to rbfs, TODO: does this apply to astar
