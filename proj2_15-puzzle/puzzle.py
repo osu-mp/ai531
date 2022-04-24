@@ -11,6 +11,7 @@ import random
 import time
 import unittest
 
+from queue import PriorityQueue
 from sys import maxsize
 
 """
@@ -67,6 +68,8 @@ class Puzzle:
             self.cost = parent.cost + cost
         else:
             self.cost = cost
+
+        print('New node: move=%s, cost=%s' % (self.move, self.cost))
 
         if not tiles:
             self.tiles = self.getSolvedPuzzle()
@@ -255,7 +258,7 @@ class Puzzle:
         for move in moves:
             # copy tiles into new child node
             tiles = copy.deepcopy(self.tiles)
-            child = Puzzle(tiles, self, move, self.cost + 1)
+            child = Puzzle(tiles, self, move, 1)
             # move the empty square in the child node
             child.moveEmpty(move)
             children.append(child)
@@ -322,8 +325,8 @@ def heuristicCityBlock(puzzle):
             # get location of expected tile and calculate distance (absolute in case it moves up/left)
             actRow, actCol = puzzle.getPosition(expectedTile)
             dist = abs(actRow - row) + abs(actCol - col)
-            if debug:
-                print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
+            # if debug:
+            #     print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
 
             sum += dist
 
@@ -396,7 +399,9 @@ def rbfsMain(node, fLimit, whichHeuristic):
     if node.isPuzzleSolved():
         return node, None
 
-    successors = []
+    print('rbfsMain flimit=%d, move=%s:' % (fLimit, node.move))
+    node.print()
+    successors = PriorityQueue()
     children = node.generateChildren()
     if not children:
         return None, maxsize
@@ -406,19 +411,24 @@ def rbfsMain(node, fLimit, whichHeuristic):
     for child in children:
         count += 1
         estimate = child.cost + whichHeuristic(child)
-        successors.append((estimate, count, child))
-        #print("%s estimate = %d" % (child.move, estimate))
+        # successors.append((estimate, count, child))
+        successors.put((estimate, count, child))
+        print("\t%s estimate = %d, cost = %d" % (child.move, estimate, child.cost))
+        child.print()
 
     while successors:
-        successors.sort()
-        bestNode = successors[0][2]
+        # successors.sort()
+        # bestNode = successors[0][2]
+        (bestF, bestCount, bestNode) = successors.get()
         if bestNode.evalFunc > fLimit:
             return None, bestNode.cost
 
-        altF = successors[1][0]
+        # altF = successors[1][0]
+        (altF, altCount, altNode) = successors.get()
         minF = min(fLimit, altF)
+
         (result, bestNode.evalFunc) = rbfsMain(bestNode, minF, whichHeuristic)
-        successors[0] = (bestNode.evalFunc, successors[0][1], bestNode)
+        #successors[0] = (bestNode.evalFunc, successors[0][1], bestNode)
 
         if result:
             break
@@ -653,10 +663,12 @@ class TestPuzzle(unittest.TestCase):
 
         # use puzzle scrambled by m moves
     def test_rbfs_m_values(self):
-        raise Exception('fails')
         m = 3
         puzzle = Puzzle()
-        puzzle.scramblePuzzle(m)
+        #puzzle.scramblePuzzle(m)
+        puzzle.moveToEmptyCell(15)
+        puzzle.moveToEmptyCell(11)
+        puzzle.moveToEmptyCell(10)
         print("Solving puzzle below")
         puzzle.print()
         (node, fLimit) = rbfs(puzzle.tiles, heuristicCityBlock)
