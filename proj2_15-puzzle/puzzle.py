@@ -377,34 +377,63 @@ def heuristicMy(puzzle):
 
     return sum
 
-
 def aStar(tiles, whichHeuristic):
     """
     A* search
     :return: Number of nodes checked
     """
-    global nodesChecked
-    nodesChecked = 0
+    global  count
+    count = 0
+    node = None
+    expanded = []
+    Q = PriorityQueue()
+    # get parent node
+    parentNode = Puzzle(tiles, None, None, 0)
+    # Get huristic value in var 'estimate'
+    estimate = whichHeuristic(parentNode)
+    # put the parent node, node count, and heuristic value in the queue
+    Q.put((estimate, count, parentNode))
 
-    estimate = whichHeuristic()
-    print('astar search with %s (estimate %d)' % (whichHeuristic.__name__, estimate))
-    time.sleep(1)
-    # raise Exception('TODO: Wadood & Joe')
-    node = None  # child node that solves puzzle
-    fLimit = 0  # final fLimit of search (TODO does this apply to astar?)
-    nodesChecked = 10
-    return (node, fLimit, nodesChecked)
+    while not Q.empty():
+        (nodeEstimate, nodeCount, node) = Q.get()
+
+        # append the expanded list with the state of the variable 'node'. Unbale to do so, idk why?
+        expanded.append(node.tiles)
+        if node.isPuzzleSolved():
+            return node, None, count
+        children = node.generateChildren()
+
+        for child in children:
+            if child.tiles not in expanded:
+                count += 1
+                # get new F value
+                estimate = whichHeuristic(child)
+                Q.put((estimate, count, child))
 
 
-nodesChecked = 0  # global var to keep track of nodes checked (both searches should reset at start)
-count = 0  # applies to rbfs, TODO: does this apply to astar
+    # print('astar search with %s (estimate %d)' % (whichHeuristic.__name__, estimate))
+    # return
 
+nodesChecked = 0                                # global var to keep track of nodes checked (both searches should reset at start)
+count = 0                                       # applies to rbfs, TODO: does this apply to astar
 
 def rbfs(tiles, whichHeuristic):
     global count, nodesChecked
 
     count = 0
     nodesChecked = 0
+
+    puzzle = Puzzle(tiles, None, None, 0)
+    (node, fLimit) = rbfsMain(puzzle, maxsize, whichHeuristic)
+    if node:
+        node.printSolution()
+        return (node, fLimit, nodesChecked)
+    else:
+        print("No solution found")
+        return (None, maxsize, nodesChecked)
+
+def rbfsMain(node, fLimit, whichHeuristic):
+    global count, nodesChecked
 
     puzzle = Puzzle(tiles, None, None, 0)
     (node, fLimit) = rbfsMain(puzzle, maxsize, whichHeuristic)
@@ -464,3 +493,4 @@ def rbfsMain(node, fLimit, whichHeuristic):
         if result:
             break
     return result, None
+
