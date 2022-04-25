@@ -44,7 +44,7 @@ For each m, plot the average time consumed, nodes searched, and the optimal solu
 
 emptySquare = '_'
 puzzleSize = 4              # number of rows and cols for puzzle (4 means 4x4 grid with 15 numbers and one emtpy cell)
-collectData = False          # set to True to generate test data (long runtime)
+collectData = True          # set to True to generate test data (long runtime)
 csvFilename = 'data.csv'    # where test runtimes are written
 debug = False               # prints debug messages when enabled
 maxNodesPerSearch = 50000    # max nodes to search before rbfs gives up
@@ -349,7 +349,7 @@ def aStar(tiles, whichHeuristic):
     Q.put((estimate, count, parentNode))
     
     while not Q.empty():
-        if count > maxNodesPerSearch:
+        if count >= maxNodesPerSearch:
             print('Max nodes exceeded, terminating search. Nodes checked: %d' % nodesChecked)
             moves = node.cost
             return None, None, count, moves
@@ -401,7 +401,7 @@ def rbfsMain(node, fLimit, whichHeuristic):
         return node, None
 
     nodesChecked += 1
-    if nodesChecked > maxNodesPerSearch:
+    if nodesChecked >= maxNodesPerSearch:
         print('Max nodes exceeded, terminating search. Nodes checked: %d' % nodesChecked)
         raise Exception('node limit exceeded')
 
@@ -510,7 +510,7 @@ class TestPuzzle(unittest.TestCase):
             for heuristic in ['cityBlock', 'myHeuristic']:
                 runData[algo][heuristic] = {}
 
-        puzzle = Puzzle()
+        numTrials = 10                                      # run this many tests at each m
         for m in [10, 20, 30, 40, 50]:                      # run for increasing number of moves from solved puzzle
 
             runData['astar']['cityBlock'][m] = []
@@ -518,7 +518,7 @@ class TestPuzzle(unittest.TestCase):
             runData['rbfs']['cityBlock'][m] = []
             runData['rbfs']['myHeuristic'][m] = []
 
-            for n in range(10):                             # TODO : run 10 trials at each m
+            for n in range(numTrials):                             # TODO : run 10 trials at each m
                 base = Puzzle()
                 base.scramblePuzzle(m)         # ensure all 4 configurations use the same scrambled puzzle
                 baseTiles = base.tiles
@@ -531,9 +531,9 @@ class TestPuzzle(unittest.TestCase):
                 print('aStar w/ cityBlock: moves=%3d, nodes=%5d, time=%1.6f' % (moves, nodesChecked, runTime))
 
                 # astar with my heuristic
-                (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, aStar, heuristicMy)
-                runData['astar']['myHeuristic'][m].append([moves, nodesChecked, runTime, solutionFound])
-                print('aStar w/ myHeur:    moves=%3d, nodes=%5d, time=%1.6f' % (moves, nodesChecked, runTime))
+                # (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, aStar, heuristicMy)
+                # runData['astar']['myHeuristic'][m].append([moves, nodesChecked, runTime, solutionFound])
+                # print('aStar w/ myHeur:    moves=%3d, nodes=%5d, time=%1.6f' % (moves, nodesChecked, runTime))
 
                 # rbfs with city block heuristic
                 (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, rbfs, heuristicCityBlock)
@@ -548,10 +548,30 @@ class TestPuzzle(unittest.TestCase):
         # now that all data has been collected, write it grouped by algo/heuristic
         for algo in runData:
             for heuristic in runData[algo]:
+                print('Algo = %s, Heuristic = %s' % (algo, heuristic))
+
                 for mValue in runData[algo][heuristic]:
-                    for puzzleNum, trial in enumerate(runData[algo][heuristic][m]):
+                    moveSum = 0
+                    nodeSum = 0
+                    timeSum = 0
+                    solnCount = 0
+
+                    for puzzleNum, trial in enumerate(runData[algo][heuristic][mValue]):
                         (moves, nodesChecked, runTime, solutionFound) = trial
                         writer.writerow([mValue, puzzleNum, algo, heuristic, moves, nodesChecked, runTime, solutionFound])
+                        moveSum += moves
+                        nodeSum += nodesChecked
+                        timeSum += runTime
+                        if solutionFound:
+                            solnCount += 1
+
+                    moveAvg = 0
+                    if solnCount:                                           # only average if a puzzle was solved, else 0
+                        moveAvg = int(moveSum / solnCount)                  # average the moves on SOLVED puzzles only
+                    nodeAvg = int(nodeSum / numTrials)
+                    timeAvg = "%.4f" % (timeSum / numTrials)
+                    solnAvg = int(solnCount / numTrials * 100)
+                    print(f' & {mValue} & {timeAvg} & {nodeAvg} & {moveAvg} & {solnAvg} \\\\')
         print('Data collection complete, results written to: %s' % csvFilename)
 
     def test_rbfs(self):
