@@ -122,7 +122,6 @@ class Puzzle:
                 nextMove = random.choice(possibleMoves)
 
             self.moveEmpty(nextMove)
-
             lastMoved = nextMove
             moves.append(nextMove)
 
@@ -130,8 +129,7 @@ class Puzzle:
             print('Scrambled %d moves: %s' % (len(moves), ', '.join(moves)))
         return moves
 
-
-    def print(self):
+      def print(self):
         """
         Print the current configuration
         :return:
@@ -382,6 +380,7 @@ def aStar(tiles, whichHeuristic):
     A* search
     :return: Number of nodes checked
     """
+
     global  count
     count = 0
     node = None 
@@ -410,9 +409,8 @@ def aStar(tiles, whichHeuristic):
                 estimate = whichHeuristic(child)
                 Q.put((estimate, count, child))
 
-    
-    # print('astar search with %s (estimate %d)' % (whichHeuristic.__name__, estimate))
-    # return
+   
+    return (node, fLimit, nodesChecked)
 
 nodesChecked = 0                                # global var to keep track of nodes checked (both searches should reset at start)
 count = 0                                       # applies to rbfs, TODO: does this apply to astar
