@@ -44,7 +44,7 @@ For each m, plot the average time consumed, nodes searched, and the optimal solu
 
 emptySquare = '_'
 puzzleSize = 4              # number of rows and cols for puzzle (4 means 4x4 grid with 15 numbers and one emtpy cell)
-collectData = True          # set to True to generate test data (long runtime)
+collectData = False          # set to True to generate test data (long runtime)
 csvFilename = 'data.csv'    # where test runtimes are written
 debug = False               # prints debug messages when enabled
 maxNodesPerSearch = 50000    # max nodes to search before rbfs gives up
@@ -91,16 +91,21 @@ class Puzzle:
                 line.append(row * puzzleSize + col + 1)         # add 1 to start tiles at 1 instead of 0
             puzzle.append(line)
 
-        # set the last squaue to blank
+        # set the last square to blank
         puzzle[puzzleSize - 1][puzzleSize - 1] = emptySquare
         return puzzle
 
     def isPuzzleSolved(self):
+        """
+        Return True if the tiles are in the goal state, else False
+        :return:
+        """
         return self.tiles == self.getSolvedPuzzle()
 
     def scramblePuzzle(self, m):
         """
-        Scramble the current puzzle by moving m random tiles
+        Scramble the current puzzle by moving the empty square m times
+        If the puzzle starts in the goal state, this will result in a solvable puzzle (all moves will be legal)
         :param m: Number of moves to scramble puzzle
         :return: Nothing (self.tiles is now scrambled)
         """
@@ -130,7 +135,7 @@ class Puzzle:
 
     def getReverseMove(self, move):
         """
-        Given a move, return the oppostive. This is used to prevent the random scramble
+        Given a move, return the opposite. This is used to prevent the random scramble
         from undoing a previous action.
         :param move:
         :return:
@@ -146,7 +151,7 @@ class Puzzle:
 
     def print(self):
         """
-        Print the current configuration
+        Print the current configuration (for debug)
         :return:
         """
         str = ""
@@ -177,30 +182,6 @@ class Puzzle:
         """
         return self.getPosition(emptySquare)
 
-    def getNeighbors(self, target):
-        """
-        Return neighbors of the given target (numbers that it can swap with)
-        :param target:
-        :return:
-        """
-        row, col = self.getPosition(target)
-
-        neighbors = []
-        # up
-        if row > 0:
-            neighbors.append(self.tiles[row - 1][col])
-        # left
-        if col > 0:
-            neighbors.append(self.tiles[row][col - 1])
-        # right
-        if col < puzzleSize - 1:
-            neighbors.append(self.tiles[row][col + 1])
-        # down
-        if row < puzzleSize - 1:
-            neighbors.append(self.tiles[row + 1][col])
-
-        return neighbors
-
     def getEmptyMoves(self):
         """
         Return the legal positions that the empty tile can move
@@ -209,13 +190,13 @@ class Puzzle:
         row, col = self.getEmptyPosition()
 
         moves = []
-        if row > 0:                     # up
+        if row > 0:                     # up (cannot be on top/first row)
             moves.append(moveU)
-        if col > 0:                     # left
+        if col > 0:                     # left (cannot be on left col)
             moves.append(moveL)
-        if col < puzzleSize - 1:        # right
+        if col < puzzleSize - 1:        # right (cannot be on right column)
             moves.append(moveR)
-        if row < puzzleSize - 1:        # down
+        if row < puzzleSize - 1:        # down (cannot be on bottom row)
             moves.append(moveD)
 
         return moves
@@ -245,26 +226,6 @@ class Puzzle:
         # put the empty square where the numbered tile previously was
         self.tiles[row][col] = emptySquare
 
-    def moveToEmptyCell(self, target):
-        """
-        Move the given number into the empty cell
-        :param target:
-        :return: True if moved, Exception if blocked
-        """
-        neighbors = self.getNeighbors(target)
-        if emptySquare not in neighbors:
-            raise Exception("Target number %d is not adjacent to empty cell, cannot move" % target)
-
-        # if they are neighbors, swap the positions
-        tarRow, tarCol = self.getPosition(target)       # position of target number that is moving
-        empRow, empCol = self.getEmptyPosition()        # position of empty cell
-
-        self.tiles[tarRow][tarCol] = emptySquare
-        self.tiles[empRow][empCol] = target
-
-        return True
-
-
     def generateChildren(self):
         """
         Generate valid children tile configurations given the current tiles
@@ -273,6 +234,7 @@ class Puzzle:
         """
         children = []
 
+        # get list of valid moves the empty tile can do
         moves = self.getEmptyMoves()
         for move in moves:
             # copy tiles into new child node
@@ -299,29 +261,7 @@ class Puzzle:
         moves.reverse()
 
         moveStr = ", ".join(moves)
-        # TODO include length
-        print("Solution: %s" % moveStr)
-
-    def getPuzzleId(self, puzzle):
-        """
-        Calculate a unique id for the given puzzle. This is needed for the rbfs prioirity queue
-        if two nodes have the same fValue.
-        This routine multiplies every existing tile against the expected tile in the solved puzzle.
-        As long as two puzzles are different, this number should be different.
-        :param puzzle:
-        :return:
-        """
-        sum = 0
-        for row in range(puzzleSize):
-            for col in range(puzzleSize):
-                # expected tile position (+1 because arrays start at 0, tiles start at 1)
-                expectedTile = row * puzzleSize + col + 1
-                actualTile = puzzle[row][col]
-                if actualTile == emptySquare:           # ignore empty square
-                    continue
-                sum += expectedTile * actualTile
-
-        return sum
+        print("Solution (cost=%d): %s" % (self.cost, moveStr))
 
 def heuristicCityBlock(puzzle):
     """
@@ -393,7 +333,7 @@ def heuristicMy(puzzle):
 def aStar(tiles, whichHeuristic):
     """
     A* search
-    :return: Number of nodes checked
+    :return: Solution node (or None if no solution found), fLimit, nodes checked, moves
     """
 
     global  count
@@ -431,7 +371,7 @@ def aStar(tiles, whichHeuristic):
    
     return (node, fLimit, nodesChecked, node.cost)
 
-nodesChecked = 0                                # global var to keep track of nodes checked (both searches should reset at start)
+nodesChecked = 0                                # global var to keep track of nodes checked in rbfs (both searches should reset at start)
 
 def rbfs(tiles, whichHeuristic):
     global nodesChecked
@@ -528,94 +468,6 @@ class TestPuzzle(unittest.TestCase):
         row, col = puzzle.getEmptyPosition()
         self.assertEqual(3, row)
         self.assertEqual(3, col)
-
-    def test_getNeighbors(self):
-        """
-        Test the getNeighbors function in various positions.
-        Use the solved puzzle (below) as a reference
-        1  2  3  4
-        5  6  7  8
-        9  10 11 12
-        13 14 15 _
-        :return:
-        """
-        puzzle = Puzzle()
-
-        # top left (only 2 neighbors)
-        target = 1
-        exp = [2, 5]
-        self.assertEqual(exp, puzzle.getNeighbors(target))
-
-        # top right (only 2 neighbors)
-        target = 4
-        exp = [3, 8]
-        self.assertEqual(exp, puzzle.getNeighbors(target))
-
-        # middle number (4 neighbors)
-        target = 7
-        exp = [3, 6, 8, 11]
-        self.assertEqual(exp, puzzle.getNeighbors(target))
-
-        # bottom left (2 neighbors)
-        target = 13
-        exp = [9, 14]
-        self.assertEqual(exp, puzzle.getNeighbors(target))
-
-        # middle bottom (3 neighbors)
-        target = 14
-        exp = [10, 13, 15]
-        self.assertEqual(exp, puzzle.getNeighbors(target))
-
-        # bottom left (2 neighbors)
-        target = emptySquare
-        exp = [12, 15]
-        self.assertEqual(exp, puzzle.getNeighbors(target))
-
-    def test_moveToEmptyCell(self):
-        """
-        Verify the move command works as expected. Start with solved puzzle:
-        1  2  3  4
-        5  6  7  8
-        9  10 11 12
-        13 14 15 _
-        :return:
-        """
-        puzzle = Puzzle()
-
-        # try to move number 1 (it is not adjacent to empty cell so exception expected)
-        self.assertRaises(Exception, puzzle.moveToEmptyCell, 1)
-
-        # move 12 to empty cell (adjacent so valid)
-        puzzle.moveToEmptyCell(12)
-        """ Current configuration
-        1  2  3  4
-        5  6  7  8
-        9  10 11 _
-        13 14 15 12        
-        """
-
-        puzzle.moveToEmptyCell(11)
-        """ Current configuration
-        1  2  3  4
-        5  6  7  8
-        9  10 _  11
-        13 14 15 12        
-        """
-
-        puzzle.moveToEmptyCell(7)
-        """ Current configuration
-        1  2  3  4
-        5  6  _  8
-        9  10 7  11
-        13 14 15 12        
-        """
-        expected = [
-            [1,   2, 3,           4],
-            [5,   6, emptySquare, 8],
-            [9,  10, 7,          11],
-            [13, 14, 15,         12]
-        ]
-        self.assertEqual(puzzle.tiles, expected)
 
     def runTest(self, tiles, searchFunc, heuristic):
         """
@@ -715,7 +567,7 @@ class TestPuzzle(unittest.TestCase):
 
         # simple case: puzzle off by one move
         puzzle = Puzzle()
-        puzzle.moveToEmptyCell(15)
+        puzzle.moveEmpty(moveL)
         print("Solving puzzle below")
         puzzle.print()
         (node, fLimit, nodesChecked, moves) = rbfs(puzzle.tiles, heuristicCityBlock)
@@ -724,16 +576,16 @@ class TestPuzzle(unittest.TestCase):
 
         # simple case: puzzle off by 2 moves
         puzzle = Puzzle()
-        puzzle.moveToEmptyCell(15)
-        puzzle.moveToEmptyCell(11)
+        puzzle.moveEmpty(moveL)
+        puzzle.moveEmpty(moveU)
         print("Solving puzzle below")
         puzzle.print()
         (node, fLimit, nodesChecked, moves) = rbfs(puzzle.tiles, heuristicCityBlock)
         self.assertEqual(2, node.cost)
 
         # use puzzle scrambled by m moves
-    # def test_rbfs_m_values(self):
-        m = 30
+    def test_rbfs_m_values(self):
+        m = 25
         puzzle = Puzzle()
         puzzle.scramblePuzzle(m)
         # puzzle.moveToEmptyCell(15)
@@ -760,7 +612,7 @@ class TestPuzzle(unittest.TestCase):
 
         # simple case: puzzle off by one move
         puzzle = Puzzle()
-        puzzle.moveToEmptyCell(15)
+        puzzle.moveEmpty(moveL)
         print("Solving puzzle below")
         puzzle.print()
         (node, fLimit, count, moves) = aStar(puzzle.tiles, heuristicCityBlock)
@@ -770,8 +622,8 @@ class TestPuzzle(unittest.TestCase):
 
         # simple case: puzzle off by 2 moves
         puzzle = Puzzle()
-        puzzle.moveToEmptyCell(15)
-        puzzle.moveToEmptyCell(11)
+        puzzle.moveEmpty(moveL)
+        puzzle.moveEmpty(moveU)
         print("Solving puzzle below")
         puzzle.print()
         (node, fLimit, count, moves) = aStar(puzzle.tiles, heuristicCityBlock)
