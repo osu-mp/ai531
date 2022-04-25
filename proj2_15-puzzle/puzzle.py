@@ -406,7 +406,7 @@ def aStar(tiles, whichHeuristic):
             if child.tiles not in expanded:
                 count += 1
                 # get new F value
-                estimate = whichHeuristic(child)
+                estimate = child.cost + whichHeuristic(child)
                 Q.put((estimate, count, child))
 
    
