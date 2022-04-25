@@ -44,11 +44,12 @@ For each m, plot the average time consumed, nodes searched, and the optimal solu
 
 emptySquare = '_'
 puzzleSize = 4              # number of rows and cols for puzzle (4 means 4x4 grid with 15 numbers and one emtpy cell)
-collectData = True         # set to True to generate test data (long runtime)
-maxNodes = 1000             # TODO tune to a sensible value
+collectData = True          # set to True to generate test data (long runtime)
+maxNodes = 5000             # TODO tune to a sensible value
 csvFilename = 'data.csv'    # where test runtimes are written
 debug = False               # prints debug messages when enabled
 maxNodesPerSearch = 100
+
 moveL = 'L'                 # movement the empty tile can do: left, right, up, down
 moveR = 'R'                 # if tile is on an edge, some movements will not be allowed
 moveU = 'U'
@@ -413,12 +414,10 @@ def aStar(tiles, whichHeuristic):
     return (node, fLimit, nodesChecked)
 
 nodesChecked = 0                                # global var to keep track of nodes checked (both searches should reset at start)
-count = 0                                       # applies to rbfs, TODO: does this apply to astar
 
 def rbfs(tiles, whichHeuristic):
-    global count, nodesChecked
+    global nodesChecked
 
-    count = 0
     nodesChecked = 0
 
     puzzle = Puzzle(tiles, None, None, 0)
@@ -431,9 +430,9 @@ def rbfs(tiles, whichHeuristic):
         return (None, maxsize, nodesChecked)
 
 def rbfsMain(node, fLimit, whichHeuristic):
-    global count, nodesChecked
+    global nodesChecked
     successors = []
-    result = None
+    # result = None
 
     if node.isPuzzleSolved():
         return node, None
@@ -441,50 +440,40 @@ def rbfsMain(node, fLimit, whichHeuristic):
     nodesChecked += 1
     # if nodesChecked > maxNodesPerSearch:
     #     print('Max nodes exceeded, terminating search. Nodes checked: %d' % nodesChecked)
-    #     return None, fLimit
+        # raise Exception('node limit exceeded')
 
-    # if debug:
-    #     print('rbfsMain flimit=%d, move=%s:' % (fLimit, node.move))
-    #     node.print()
-
-    # successors = PriorityQueue()
     children = node.generateChildren()
     if len(children) == 0:
         return None, maxsize
 
-    #count -= 1
-    count = -1
+    childPos = 0        # used to differentiate between nodes with the same f value
 
     for child in children:
-        count += 1
+        childPos += 1
         estimate = child.cost + whichHeuristic(child)
-        successors.append((estimate, count, child))
+        successors.append((estimate, childPos, child))
         child.evalFunc = estimate
-        # successors.put((estimate, count, child))
 
         if debug:
             print("\t%s estimate = %d, cost = %d" % (child.move, estimate, child.cost))
             child.print()
 
-    while successors:
+    while len(successors) > 0:
         successors.sort()
-        bestNode = successors[0][2]
-        # (bestF, bestCount, bestNode) = successors.get()
+        (bestF, bestPos, bestNode) = successors[0]
         if bestNode.evalFunc > fLimit:
             return None, bestNode.evalFunc
 
-        altF = successors[1][0]
-        # (altF, altCount, altNode) = successors.get()
+        (altF, altPos, altNode) = successors[1]
         minF = min(fLimit, altF)
 
         (result, bestNode.evalFunc) = rbfsMain(bestNode, minF, whichHeuristic)
-        successors[0] = (bestNode.evalFunc, successors[0][1], bestNode)
+        successors[0] = (bestNode.evalFunc, bestPos, bestNode)
 
         if result != None:
             break
 
     return result, None
-
 
 class TestPuzzle(unittest.TestCase):
 
