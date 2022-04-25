@@ -129,7 +129,7 @@ class Puzzle:
             print('Scrambled %d moves: %s' % (len(moves), ', '.join(moves)))
         return moves
 
-      def print(self):
+    def print(self):
         """
         Print the current configuration
         :return:
@@ -637,39 +637,52 @@ class TestPuzzle(unittest.TestCase):
                 runData[algo][heuristic] = {}
 
         puzzle = Puzzle()
-        for m in [10]:#, 20, 30, 40, 50]:                      # run for increasing number of moves from solved puzzle
+        for m in [10, 20, 30, 40, 50]:                      # run for increasing number of moves from solved puzzle
 
             runData['astar']['cityBlock'][m] = []
             runData['astar']['myHeuristic'][m] = []
             runData['rbfs']['cityBlock'][m] = []
             runData['rbfs']['myHeuristic'][m] = []
 
+            print("\nm = %d" % m)
+
             for n in range(5):                             # TODO : run 10 trials at each m
                 base = Puzzle()
                 base.scramblePuzzle(m)         # ensure all 4 configurations use the same scrambled puzzle
                 baseTiles = base.tiles
-                print('Puzzle Number %d (m=%d)' % (n, m))
-                base.print()
+                # print('Puzzle Number %d (m=%d)' % (n, m))
+                # base.print()
 
                 # # astar with city block heuristic
                 (nodesChecked, moves, runTime) = self.runTest(baseTiles, aStar, heuristicCityBlock)
+                (astarCityNodes, astarCityMoves) = (nodesChecked, moves)     # for heuristic comparison
                 runData['astar']['cityBlock'][m].append([moves, nodesChecked, runTime])
-                print('aStar w/ cityBlock: moves=%3d, nodes=%5d, time=%1.6f' % (moves, nodesChecked, runTime))
+                # print('aStar w/ cityBlock: moves=%3d, nodes=%5d, time=%1.6f' % (moves, nodesChecked, runTime))
 
                 # astar with my heuristic
                 (nodesChecked, moves, runTime) = self.runTest(baseTiles, aStar, heuristicMy)
+                (astarMyHNodes, astarMyHMoves) = (nodesChecked, moves)     # for heuristic comparison
                 runData['astar']['myHeuristic'][m].append([moves, nodesChecked, runTime])
-                print('aStar w/ myHeur:    moves=%3d, nodes=%5d, time=%1.6f' % (moves, nodesChecked, runTime))
+                # print('aStar w/ myHeur:    moves=%3d, nodes=%5d, time=%1.6f' % (moves, nodesChecked, runTime))
 
                 # rbfs with city block heuristic
-                (nodesChecked, moves, runTime) = self.runTest(baseTiles, rbfs, heuristicCityBlock)
-                runData['rbfs']['cityBlock'][m].append([moves, nodesChecked, runTime])
-                print('rbfs  w/ cityBlock: moves=%3d, nodes=%5d, time=%f' % (moves, nodesChecked, runTime))
+                # (nodesChecked, moves, runTime) = self.runTest(baseTiles, rbfs, heuristicCityBlock)
+                # (rbfsCityNodes, rbfsCityMoves) = (nodesChecked, moves)     # for heuristic comparison
+                # runData['rbfs']['cityBlock'][m].append([moves, nodesChecked, runTime])
+                # print('rbfs  w/ cityBlock: moves=%3d, nodes=%5d, time=%f' % (moves, nodesChecked, runTime))
 
                 # rbfs with my heuristic
                 # (nodesChecked, moves, runTime) = self.runTest(baseTiles, rbfs, heuristicMy)
+                # (rbfsMyHNodes, rbfsMyHMoves) = (nodesChecked, moves)     # for heuristic comparison
                 # runData['rbfs']['myHeuristic'][m].append([moves, nodesChecked, runTime])
                 # print('rbfs  w/ myHeur:    moves=%3d, nodes=%5d, time=%f' % (moves, nodesChecked, runTime))
+
+                print('astar & city  moves=%4d  nodes=%4d' % (astarCityMoves, astarCityNodes))
+                print('astar & myh   moves=%4d  nodes=%4d\n' % (astarMyHMoves, astarMyHNodes))
+
+                # print('rbfs  & city  moves=%4d  nodes=%4d' % (rbfsCityMoves, rbfsCityNodes))
+                # print('rbfs  & myh   moves=%4d  nodes=%4d' % (rbfsMyHMoves, rbfsMyHNodes))
+
 
         # now that all data has been collected, write it grouped by algo/heuristic
         for algo in runData:
@@ -709,8 +722,8 @@ class TestPuzzle(unittest.TestCase):
         self.assertEqual(2, node.cost)
 
         # use puzzle scrambled by m moves
-    def test_rbfs_m_values(self):
-        m = 8
+    #def test_rbfs_m_values(self):
+        m = 15
         puzzle = Puzzle()
         puzzle.scramblePuzzle(m)
         # puzzle.moveToEmptyCell(15)
