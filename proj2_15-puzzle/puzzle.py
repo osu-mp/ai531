@@ -47,7 +47,7 @@ puzzleSize = 4              # number of rows and cols for puzzle (4 means 4x4 gr
 collectData = True          # set to True to generate test data (long runtime)
 csvFilename = 'data.csv'    # where test runtimes are written
 debug = False               # prints debug messages when enabled
-maxNodesPerSearch = 100000    # max nodes to search before rbfs gives up
+maxNodesPerSearch = 50000    # max nodes to search before rbfs gives up
 
 moveL = 'L'                 # movement the empty tile can do: left, right, up, down
 moveR = 'R'                 # if tile is on an edge, some movements will not be allowed
@@ -409,12 +409,16 @@ def aStar(tiles, whichHeuristic):
     Q.put((estimate, count, parentNode))
     
     while not Q.empty():
+        if count > maxNodesPerSearch:
+            print('Max nodes exceeded, terminating search. Nodes checked: %d' % nodesChecked)
+            moves = node.cost
+            return None, None, count, moves
         (nodeEstimate, nodeCount, node) = Q.get()
 
         # append the expanded list with the state of the variable 'node'. Unbale to do so, idk why?
         expanded.append(node.tiles)
         if node.isPuzzleSolved():
-            return node, None, count
+            return node, None, count, node.cost
         children = node.generateChildren()
 
         for child in children:
@@ -425,7 +429,7 @@ def aStar(tiles, whichHeuristic):
                 Q.put((estimate, count, child))
 
    
-    return (node, fLimit, nodesChecked)
+    return (node, fLimit, nodesChecked, node.cost)
 
 nodesChecked = 0                                # global var to keep track of nodes checked (both searches should reset at start)
 
@@ -443,10 +447,10 @@ def rbfs(tiles, whichHeuristic):
 
     if node:
         node.printSolution()
-        return (node, fLimit, nodesChecked)
+        return (node, fLimit, nodesChecked, node.cost)
     else:
         print("No solution found")
-        return (None, maxsize, nodesChecked)
+        return (None, maxsize, nodesChecked, 0)
 
 def rbfsMain(node, fLimit, whichHeuristic):
     global nodesChecked
@@ -622,11 +626,15 @@ class TestPuzzle(unittest.TestCase):
         :return:
         """
         start = time.time()                             # get start time
-        (node, fLimit, nodesChecked) = searchFunc(tiles, heuristic)            # run the search function with selected heuristic
+        (node, fLimit, nodesChecked, moves) = searchFunc(tiles, heuristic)            # run the search function with selected heuristic
         end = time.time()                               # record runtime
 
-        moves = node.cost
-        return (nodesChecked, moves, end - start)              # return number of nodes checked and runtime
+        solutionFound = False
+        if node:
+            moves = node.cost
+            solutionFound = True
+
+        return (nodesChecked, moves, end - start, solutionFound)              # return number of nodes checked and runtime
 
     def test_data_collection(self):
         """
@@ -641,7 +649,7 @@ class TestPuzzle(unittest.TestCase):
         # TODO save to csv
         csvFH = open(csvFilename, 'w', newline='')
         writer = csv.writer(csvFH)
-        writer.writerow(['m', 'puzzleNum', 'searchFunc', 'heuristic', 'moves', 'nodesChecked', 'runTime (seconds)'])
+        writer.writerow(['m', 'puzzleNum', 'searchFunc', 'heuristic', 'moves', 'nodesChecked', 'runTime (seconds)', 'solutionFound'])
 
         # collect data into run data and write it later
         runData = {}
@@ -666,23 +674,23 @@ class TestPuzzle(unittest.TestCase):
                 base.print()
 
                 # # astar with city block heuristic
-                (nodesChecked, moves, runTime) = self.runTest(baseTiles, aStar, heuristicCityBlock)
-                runData['astar']['cityBlock'][m].append([moves, nodesChecked, runTime])
+                (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, aStar, heuristicCityBlock)
+                runData['astar']['cityBlock'][m].append([moves, nodesChecked, runTime, solutionFound])
                 print('aStar w/ cityBlock: moves=%3d, nodes=%5d, time=%1.6f' % (moves, nodesChecked, runTime))
 
                 # astar with my heuristic
-                # (nodesChecked, moves, runTime) = self.runTest(baseTiles, aStar, heuristicMy)
-                # runData['astar']['myHeuristic'][m].append([moves, nodesChecked, runTime])
-                # print('aStar w/ myHeur:    moves=%3d, nodes=%5d, time=%1.6f' % (moves, nodesChecked, runTime))
+                (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, aStar, heuristicMy)
+                runData['astar']['myHeuristic'][m].append([moves, nodesChecked, runTime, solutionFound])
+                print('aStar w/ myHeur:    moves=%3d, nodes=%5d, time=%1.6f' % (moves, nodesChecked, runTime))
 
                 # rbfs with city block heuristic
-                # (nodesChecked, moves, runTime) = self.runTest(baseTiles, rbfs, heuristicCityBlock)
-                # runData['rbfs']['cityBlock'][m].append([moves, nodesChecked, runTime])
-                # print('rbfs  w/ cityBlock: moves=%3d, nodes=%5d, time=%f' % (moves, nodesChecked, runTime))
+                (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, rbfs, heuristicCityBlock)
+                runData['rbfs']['cityBlock'][m].append([moves, nodesChecked, runTime, solutionFound])
+                print('rbfs  w/ cityBlock: moves=%3d, nodes=%5d, time=%f' % (moves, nodesChecked, runTime))
 
                 # rbfs with my heuristic
-                # (nodesChecked, moves, runTime) = self.runTest(baseTiles, rbfs, heuristicMy)
-                # runData['rbfs']['myHeuristic'][m].append([moves, nodesChecked, runTime])
+                # (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, rbfs, heuristicMy)
+                # runData['rbfs']['myHeuristic'][m].append([moves, nodesChecked, runTime, solutionFound])
                 # print('rbfs  w/ myHeur:    moves=%3d, nodes=%5d, time=%f' % (moves, nodesChecked, runTime))
 
         # now that all data has been collected, write it grouped by algo/heuristic
@@ -690,8 +698,8 @@ class TestPuzzle(unittest.TestCase):
             for heuristic in runData[algo]:
                 for mValue in runData[algo][heuristic]:
                     for puzzleNum, trial in enumerate(runData[algo][heuristic][m]):
-                        (moves, nodesChecked, runTime) = trial
-                        writer.writerow([mValue, puzzleNum, algo, heuristic, moves, nodesChecked, runTime])
+                        (moves, nodesChecked, runTime, solutionFound) = trial
+                        writer.writerow([mValue, puzzleNum, algo, heuristic, moves, nodesChecked, runTime, solutionFound])
         print('Data collection complete, results written to: %s' % csvFilename)
 
     def test_rbfs(self):
@@ -701,7 +709,7 @@ class TestPuzzle(unittest.TestCase):
         """
         # base case: already solved puzzle (0 moves)
         puzzle = Puzzle()
-        (node, fLimit, nodesChecked) = rbfs(puzzle.tiles, heuristicCityBlock)
+        (node, fLimit, nodesChecked, moves) = rbfs(puzzle.tiles, heuristicCityBlock)
         print('node %s' % node)
         self.assertEqual(0, node.cost)
 
@@ -710,7 +718,7 @@ class TestPuzzle(unittest.TestCase):
         puzzle.moveToEmptyCell(15)
         print("Solving puzzle below")
         puzzle.print()
-        (node, fLimit, nodesChecked) = rbfs(puzzle.tiles, heuristicCityBlock)
+        (node, fLimit, nodesChecked, moves) = rbfs(puzzle.tiles, heuristicCityBlock)
         self.assertIsNotNone(node, "failed to solve puzzle")
         self.assertEqual(1, node.cost)
 
@@ -720,7 +728,7 @@ class TestPuzzle(unittest.TestCase):
         puzzle.moveToEmptyCell(11)
         print("Solving puzzle below")
         puzzle.print()
-        (node, fLimit, nodesChecked) = rbfs(puzzle.tiles, heuristicCityBlock)
+        (node, fLimit, nodesChecked, moves) = rbfs(puzzle.tiles, heuristicCityBlock)
         self.assertEqual(2, node.cost)
 
         # use puzzle scrambled by m moves
@@ -733,7 +741,7 @@ class TestPuzzle(unittest.TestCase):
         # puzzle.moveToEmptyCell(10)
         print("Solving puzzle below")
         puzzle.print()
-        (node, fLimit, nodesChecked) = rbfs(puzzle.tiles, heuristicCityBlock)
+        (node, fLimit, nodesChecked, moves) = rbfs(puzzle.tiles, heuristicCityBlock)
         self.assertIsNotNone(node, "Failed to find solution")
         self.assertTrue(node.cost <= m, 'Solution took move moves than scramble')
         print('Nodes checked: %d' % nodesChecked)
@@ -746,7 +754,7 @@ class TestPuzzle(unittest.TestCase):
         """
         # base case: already solved puzzle (0 moves)
         puzzle = Puzzle()
-        (node, fLimit, count) = aStar(puzzle.tiles, heuristicCityBlock)
+        (node, fLimit, count, moves) = aStar(puzzle.tiles, heuristicCityBlock)
         print('node %s' % node)
         self.assertEqual(0, node.cost)
 
@@ -755,7 +763,7 @@ class TestPuzzle(unittest.TestCase):
         puzzle.moveToEmptyCell(15)
         print("Solving puzzle below")
         puzzle.print()
-        (node, fLimit, count) = aStar(puzzle.tiles, heuristicCityBlock)
+        (node, fLimit, count, moves) = aStar(puzzle.tiles, heuristicCityBlock)
         if node:
             print('Solved with cost %d' % node.cost)
         self.assertEqual(1, node.cost)
@@ -766,7 +774,7 @@ class TestPuzzle(unittest.TestCase):
         puzzle.moveToEmptyCell(11)
         print("Solving puzzle below")
         puzzle.print()
-        (node, fLimit, count) = aStar(puzzle.tiles, heuristicCityBlock)
+        (node, fLimit, count, moves) = aStar(puzzle.tiles, heuristicCityBlock)
         if node:
             print('Solved with cost %d' % node.cost)
         self.assertEqual(2, node.cost)
