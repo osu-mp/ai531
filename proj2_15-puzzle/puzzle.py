@@ -656,18 +656,22 @@ class TestPuzzle(unittest.TestCase):
                 # # astar with city block heuristic
                 (nodesChecked, moves, runTime) = self.runTest(baseTiles, aStar, heuristicCityBlock)
                 runData['astar']['cityBlock'][m].append([moves, nodesChecked, runTime])
+                print('aStar w/ cityBlock: moves=%3d, nodes=%5d, time=%1.6f' % (moves, nodesChecked, runTime))
 
                 # astar with my heuristic
                 (nodesChecked, moves, runTime) = self.runTest(baseTiles, aStar, heuristicMy)
                 runData['astar']['myHeuristic'][m].append([moves, nodesChecked, runTime])
+                print('aStar w/ myHeur:    moves=%3d, nodes=%5d, time=%1.6f' % (moves, nodesChecked, runTime))
 
                 # rbfs with city block heuristic
                 (nodesChecked, moves, runTime) = self.runTest(baseTiles, rbfs, heuristicCityBlock)
                 runData['rbfs']['cityBlock'][m].append([moves, nodesChecked, runTime])
+                print('rbfs  w/ cityBlock: moves=%3d, nodes=%5d, time=%f' % (moves, nodesChecked, runTime))
 
                 # rbfs with my heuristic
                 # (nodesChecked, moves, runTime) = self.runTest(baseTiles, rbfs, heuristicMy)
                 # runData['rbfs']['myHeuristic'][m].append([moves, nodesChecked, runTime])
+                # print('rbfs  w/ myHeur:    moves=%3d, nodes=%5d, time=%f' % (moves, nodesChecked, runTime))
 
         # now that all data has been collected, write it grouped by algo/heuristic
         for algo in runData:
