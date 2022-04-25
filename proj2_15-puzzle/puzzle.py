@@ -129,7 +129,7 @@ class Puzzle:
             print('Scrambled %d moves: %s' % (len(moves), ', '.join(moves)))
         return moves
 
-      def print(self):
+    def print(self):
         """
         Print the current configuration
         :return:
@@ -432,51 +432,57 @@ def rbfs(tiles, whichHeuristic):
 
 def rbfsMain(node, fLimit, whichHeuristic):
     global count, nodesChecked
+    successors = []
+    result = None
 
     if node.isPuzzleSolved():
         return node, None
 
     nodesChecked += 1
-    if nodesChecked > maxNodesPerSearch:
-        print('Max nodes exceeded, terminating search. Nodes checked: %d' % nodesChecked)
-        return None, fLimit
+    # if nodesChecked > maxNodesPerSearch:
+    #     print('Max nodes exceeded, terminating search. Nodes checked: %d' % nodesChecked)
+    #     return None, fLimit
 
-    if debug:
-        print('rbfsMain flimit=%d, move=%s:' % (fLimit, node.move))
-        node.print()
-    successors = PriorityQueue()
+    # if debug:
+    #     print('rbfsMain flimit=%d, move=%s:' % (fLimit, node.move))
+    #     node.print()
+
+    # successors = PriorityQueue()
     children = node.generateChildren()
-    if not children:
+    if len(children) == 0:
         return None, maxsize
 
-    count -= 1
+    #count -= 1
+    count = -1
 
     for child in children:
         count += 1
         estimate = child.cost + whichHeuristic(child)
-        # successors.append((estimate, count, child))
-        successors.put((estimate, count, child))
+        successors.append((estimate, count, child))
+        child.evalFunc = estimate
+        # successors.put((estimate, count, child))
 
         if debug:
             print("\t%s estimate = %d, cost = %d" % (child.move, estimate, child.cost))
             child.print()
 
     while successors:
-        # successors.sort()
-        # bestNode = successors[0][2]
-        (bestF, bestCount, bestNode) = successors.get()
+        successors.sort()
+        bestNode = successors[0][2]
+        # (bestF, bestCount, bestNode) = successors.get()
         if bestNode.evalFunc > fLimit:
-            return None, bestNode.cost
+            return None, bestNode.evalFunc
 
-        # altF = successors[1][0]
-        (altF, altCount, altNode) = successors.get()
+        altF = successors[1][0]
+        # (altF, altCount, altNode) = successors.get()
         minF = min(fLimit, altF)
 
         (result, bestNode.evalFunc) = rbfsMain(bestNode, minF, whichHeuristic)
-        #successors[0] = (bestNode.evalFunc, successors[0][1], bestNode)
+        successors[0] = (bestNode.evalFunc, successors[0][1], bestNode)
 
-        if result:
+        if result != None:
             break
+
     return result, None
 
 
@@ -637,14 +643,14 @@ class TestPuzzle(unittest.TestCase):
                 runData[algo][heuristic] = {}
 
         puzzle = Puzzle()
-        for m in [10]:#, 20, 30, 40, 50]:                      # run for increasing number of moves from solved puzzle
+        for m in [10, 20, 30, 40, 50]:                      # run for increasing number of moves from solved puzzle
 
             runData['astar']['cityBlock'][m] = []
             runData['astar']['myHeuristic'][m] = []
             runData['rbfs']['cityBlock'][m] = []
             runData['rbfs']['myHeuristic'][m] = []
 
-            for n in range(5):                             # TODO : run 10 trials at each m
+            for n in range(10):                             # TODO : run 10 trials at each m
                 base = Puzzle()
                 base.scramblePuzzle(m)         # ensure all 4 configurations use the same scrambled puzzle
                 baseTiles = base.tiles
@@ -697,6 +703,7 @@ class TestPuzzle(unittest.TestCase):
         print("Solving puzzle below")
         puzzle.print()
         (node, fLimit, nodesChecked) = rbfs(puzzle.tiles, heuristicCityBlock)
+        self.assertIsNotNone(node, "failed to solve puzzle")
         self.assertEqual(1, node.cost)
 
         # simple case: puzzle off by 2 moves
@@ -709,8 +716,8 @@ class TestPuzzle(unittest.TestCase):
         self.assertEqual(2, node.cost)
 
         # use puzzle scrambled by m moves
-    def test_rbfs_m_values(self):
-        m = 8
+    # def test_rbfs_m_values(self):
+        m = 50
         puzzle = Puzzle()
         puzzle.scramblePuzzle(m)
         # puzzle.moveToEmptyCell(15)
@@ -718,7 +725,7 @@ class TestPuzzle(unittest.TestCase):
         # puzzle.moveToEmptyCell(10)
         print("Solving puzzle below")
         puzzle.print()
-        (node, fLimit, nodesChecked) = rbfs(puzzle.tiles, heuristicMy)
+        (node, fLimit, nodesChecked) = rbfs(puzzle.tiles, heuristicCityBlock)
         self.assertTrue(node.cost <= m, 'Solution took move moves than scramble')
 
 
