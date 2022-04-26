@@ -503,4 +503,3 @@ def rbfsMain(node, fLimit, whichHeuristic):
             break
 
     return result, None
-
