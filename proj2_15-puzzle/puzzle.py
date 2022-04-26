@@ -7,10 +7,13 @@
 
 import copy
 import random
+import time
 
 from queue import PriorityQueue
 from sys import maxsize
 from typing import List, Dict
+
+heuristicTime = 0
 
 """
 Assignment Description
@@ -42,7 +45,7 @@ For each m, plot the average time consumed, nodes searched, and the optimal solu
 
 emptySquare = '_'
 puzzleSize = 4              # number of rows and cols for puzzle (4 means 4x4 grid with 15 numbers and one emtpy cell)
-collectData = True          # set to True to generate test data (long runtime)
+collectData = False          # set to True to generate test data (long runtime)
 csvFilename = 'data.csv'    # where test runtimes are written
 debug = False               # prints debug messages when enabled
 maxNodesPerSearch = 50000    # max nodes to search before rbfs gives up
@@ -335,7 +338,12 @@ def heuristicCityBlock(puzzle: Puzzle):
 
     for row in range(puzzleSize):
         for col in range(puzzleSize):
-            val = puzzle.tiles[row][col]
+            try:
+                val = puzzle.tiles[row][col]
+            except Exception:
+                print(f'Exception at {row},{col}')
+                print(puzzle.tiles)
+                a = 1
             if val == emptySquare:
                 continue
             actRow, actCol = puzzle.getTargetPosition(val)
@@ -426,9 +434,6 @@ def aStar(tiles, whichHeuristic):
                 # get new F value
                 estimate = child.cost + whichHeuristic(child)
                 Q.put((estimate, count, child))
-
-   
-    return (node, fLimit, nodesChecked, node.cost)
 
 nodesChecked = 0                                # global var to keep track of nodes checked in rbfs (both searches should reset at start)
 

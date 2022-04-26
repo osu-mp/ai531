@@ -5,6 +5,12 @@ import unittest
 from linear_conflict import linear_conflict_heuristic
 from puzzle import Puzzle, emptySquare, collectData, csvFilename, rbfs, heuristicCityBlock, heuristicMy, aStar
 
+moveL = 'L'                 # movement the empty tile can do: left, right, up, down
+moveR = 'R'                 # if tile is on an edge, some movements will not be allowed
+moveU = 'U'
+moveD = 'D'
+
+heuristicTime = 0
 
 class TestPuzzle(unittest.TestCase):
 
@@ -57,7 +63,7 @@ class TestPuzzle(unittest.TestCase):
 
         return (nodesChecked, moves, end - start, solutionFound)              # return number of nodes checked and runtime
 
-      def test_data_collection(self):
+    def test_data_collection(self):
         """
         Try all combinations of searches and collect performance data into a csv
         :return:
@@ -243,7 +249,7 @@ class TestPuzzle(unittest.TestCase):
         # puzzle.moveToEmptyCell(10)
         print("Solving puzzle below")
         puzzle.print()
-        (node, fLimit, nodesChecked) = rbfs(puzzle.tiles, heuristicMy)
+        (node, fLimit, nodesChecked, moves) = rbfs(puzzle.tiles, heuristicMy)
         self.assertTrue(node.cost <= m, 'Solution took move moves than scramble')
 
     def test_cityBlock(self):
@@ -300,10 +306,6 @@ class TestPuzzle(unittest.TestCase):
         #            9         10        11       12        13        14   15
         self.assertEqual(expected, heuristicMy(puzzle))
 
-    def test_linearconflict(self):
-        puzzle = Puzzle(tiles=[[emptySquare, 2, 1], [7, 4, 5], [6, 3, 8]])
-        print(f'{linear_conflict_heuristic(puzzle)=}')
-
     def test_getTargetPosition(self):
         puzzle = Puzzle()
         print(f'{puzzle.target_pos=}')
@@ -314,27 +316,27 @@ class TestPuzzle(unittest.TestCase):
         heuristic = linear_conflict_heuristic
 
         puzzle = Puzzle()
-        (node, fLimit, count) = aStar(puzzle.tiles, heuristic)
+        (node, fLimit, count, moves) = aStar(puzzle.tiles, heuristic)
         print('node %s' % node)
         self.assertEqual(0, node.cost)
 
         # simple case: puzzle off by one move
         puzzle = Puzzle()
-        puzzle.moveToEmptyCell(15)
+        puzzle.moveEmpty(moveL)
         print("Solving puzzle below")
         puzzle.print()
-        (node, fLimit, count) = aStar(puzzle.tiles, heuristic)
+        (node, fLimit, count, moves) = aStar(puzzle.tiles, heuristic)
         if node:
             print('Solved with cost %d' % node.cost)
         self.assertEqual(1, node.cost)
 
         # simple case: puzzle off by 2 moves
         puzzle = Puzzle()
-        puzzle.moveToEmptyCell(15)
-        puzzle.moveToEmptyCell(11)
+        puzzle.moveEmpty(moveL)
+        puzzle.moveEmpty(moveU)
         print("Solving puzzle below")
         puzzle.print()
-        (node, fLimit, count) = aStar(puzzle.tiles, heuristic)
+        (node, fLimit, count, moves) = aStar(puzzle.tiles, heuristic)
         if node:
             print('Solved with cost %d' % node.cost)
             print(node)
