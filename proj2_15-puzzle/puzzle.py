@@ -263,12 +263,16 @@ class Puzzle:
         moveStr = ", ".join(moves)
         print("Solution (cost=%d): %s" % (self.cost, moveStr))
 
+
 def heuristicCityBlock(puzzle):
     """
     City block heuristic: estimate number of moves for each tile to intended location
     This is admissible since it never over-estimates the number of moves
     :return:
     """
+    global heuristicTime
+    start = time.time()
+
     # for each tile, count the number of moves to its intended position (assume no other tiles)
     sum = 0
 
@@ -288,6 +292,9 @@ def heuristicCityBlock(puzzle):
             #     print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
 
             sum += dist
+
+    end = time.time()
+    heuristicTime += end - start
 
     return sum
 
@@ -397,6 +404,10 @@ def rbfsMain(node, fLimit, whichHeuristic):
     successors = []
     # result = None
 
+    # if debug:
+    #     print('rbfsMain flimit=%d, move=%s:' % (fLimit, node.move))
+    #     node.print()
+
     if node.isPuzzleSolved():
         return node, None
 
@@ -430,7 +441,9 @@ def rbfsMain(node, fLimit, whichHeuristic):
         (altF, altPos, altNode) = successors[1]
         minF = min(fLimit, altF)
 
+        # fBefore = bestNode.evalFunc
         (result, bestNode.evalFunc) = rbfsMain(bestNode, minF, whichHeuristic)
+        # print(f'Backout fBefore={fBefore}, fAfter={bestNode.evalFunc}')
         successors[0] = (bestNode.evalFunc, bestPos, bestNode)
 
         if result != None:
@@ -493,6 +506,8 @@ class TestPuzzle(unittest.TestCase):
         Try all combinations of searches and collect performance data into a csv
         :return:
         """
+        global heuristicTime
+
         # TODO : this has not been updated to new methods (4/23)
         # TODO : Matthew update after search functions complete
         if not collectData:
@@ -501,7 +516,7 @@ class TestPuzzle(unittest.TestCase):
         # TODO save to csv
         csvFH = open(csvFilename, 'w', newline='')
         writer = csv.writer(csvFH)
-        writer.writerow(['m', 'puzzleNum', 'searchFunc', 'heuristic', 'moves', 'nodesChecked', 'runTime (seconds)', 'solutionFound'])
+        writer.writerow(['m', 'puzzleNum', 'searchFunc', 'heuristic', 'moves', 'nodesChecked', 'runTime (seconds)', 'solutionFound', 'heuristic % runTime', 'heuristic time'])
 
         # collect data into run data and write it later
         runData = {}
@@ -526,9 +541,11 @@ class TestPuzzle(unittest.TestCase):
                 base.print()
 
                 # # astar with city block heuristic
+                heuristicTime = 0                           # reset heuristic timer
                 (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, aStar, heuristicCityBlock)
-                runData['astar']['cityBlock'][m].append([moves, nodesChecked, runTime, solutionFound])
-                print('aStar w/ cityBlock: moves=%3d, nodes=%5d, time=%1.6f' % (moves, nodesChecked, runTime))
+                heuristicPct = heuristicTime / runTime * 100
+                runData['astar']['cityBlock'][m].append([moves, nodesChecked, runTime, solutionFound, heuristicPct, heuristicTime])
+                print('aStar w/ cityBlock: moves=%3d, nodes=%5d, time=%1.6f, heuristicPct=%2.4f' % (moves, nodesChecked, runTime, heuristicPct))
 
                 # astar with my heuristic
                 # (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, aStar, heuristicMy)
@@ -536,9 +553,11 @@ class TestPuzzle(unittest.TestCase):
                 # print('aStar w/ myHeur:    moves=%3d, nodes=%5d, time=%1.6f' % (moves, nodesChecked, runTime))
 
                 # rbfs with city block heuristic
+                heuristicTime = 0                           # reset heuristic timer
                 (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, rbfs, heuristicCityBlock)
-                runData['rbfs']['cityBlock'][m].append([moves, nodesChecked, runTime, solutionFound])
-                print('rbfs  w/ cityBlock: moves=%3d, nodes=%5d, time=%f' % (moves, nodesChecked, runTime))
+                heuristicPct = heuristicTime / runTime * 100
+                runData['rbfs']['cityBlock'][m].append([moves, nodesChecked, runTime, solutionFound, heuristicPct, heuristicTime])
+                print('rbfs  w/ cityBlock: moves=%3d, nodes=%5d, time=%f, heuristicPct=%2.4f' % (moves, nodesChecked, runTime, heuristicPct))
 
                 # rbfs with my heuristic
                 # (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, rbfs, heuristicMy)
@@ -557,8 +576,8 @@ class TestPuzzle(unittest.TestCase):
                     solnCount = 0
 
                     for puzzleNum, trial in enumerate(runData[algo][heuristic][mValue]):
-                        (moves, nodesChecked, runTime, solutionFound) = trial
-                        writer.writerow([mValue, puzzleNum, algo, heuristic, moves, nodesChecked, runTime, solutionFound])
+                        (moves, nodesChecked, runTime, solutionFound, heuristicPct, heuristicTime) = trial
+                        writer.writerow([mValue, puzzleNum, algo, heuristic, moves, nodesChecked, runTime, solutionFound, heuristicPct, heuristicTime])
                         moveSum += moves
                         nodeSum += nodesChecked
                         timeSum += runTime
@@ -605,12 +624,17 @@ class TestPuzzle(unittest.TestCase):
 
         # use puzzle scrambled by m moves
     def test_rbfs_m_values(self):
-        m = 25
+        m = 20
         puzzle = Puzzle()
         puzzle.scramblePuzzle(m)
-        # puzzle.moveToEmptyCell(15)
-        # puzzle.moveToEmptyCell(11)
-        # puzzle.moveToEmptyCell(10)
+        # puzzle.moveEmpty(moveL)
+        # puzzle.moveEmpty(moveL)
+        # puzzle.moveEmpty(moveU)
+        # puzzle.moveEmpty(moveR)
+        # puzzle.moveEmpty(moveU)
+        # puzzle.moveEmpty(moveL)
+        # puzzle.moveEmpty(moveD)
+
         print("Solving puzzle below")
         puzzle.print()
         (node, fLimit, nodesChecked, moves) = rbfs(puzzle.tiles, heuristicCityBlock)
