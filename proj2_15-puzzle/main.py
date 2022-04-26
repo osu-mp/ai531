@@ -13,6 +13,9 @@ moveD = 'D'
 
 
 class TestPuzzle(unittest.TestCase):
+    """
+    Unit tests and data collection for 15 puzzle routines
+    """
 
     def test_scramble(self):
         puzzle = Puzzle()
@@ -75,10 +78,11 @@ class TestPuzzle(unittest.TestCase):
         if not collectData:
             self.skipTest("Data collection skipped")
 
-        # TODO save to csv
+        # save raw data to csv file
         csvFH = open(csvFilename, 'w', newline='')
         writer = csv.writer(csvFH)
 
+        # header of csv
         writer.writerow(
             ['m', 'puzzleNum', 'searchFunc', 'heuristic', 'moves', 'nodesChecked', 'runTime (seconds)', 'solutionFound',
              'heuristic % runTime', 'heuristic time'])
@@ -98,7 +102,7 @@ class TestPuzzle(unittest.TestCase):
             runData['rbfs']['cityBlock'][m] = []
             runData['rbfs']['myHeuristic'][m] = []
 
-            for n in range(numTrials):  # TODO : run 10 trials at each m
+            for n in range(numTrials):
                 base = Puzzle()
                 base.scramblePuzzle(m)  # ensure all 4 configurations use the same scrambled puzzle
 
@@ -169,6 +173,8 @@ class TestPuzzle(unittest.TestCase):
                     nodeAvg = int(nodeSum / numTrials)
                     timeAvg = "%.4f" % (timeSum / numTrials)
                     solnAvg = int(solnCount / numTrials * 100)
+
+                    # printout for tables in latex report
                     print(f' & {mValue} & {timeAvg} & {nodeAvg} & {moveAvg} & {solnAvg} \\\\')
 
         print('Data collection complete, results written to: %s' % csvFilename)
