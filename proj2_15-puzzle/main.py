@@ -94,7 +94,9 @@ class TestPuzzle(unittest.TestCase):
                 runData[algo][heuristic] = {}
 
         numTrials = 10  # run this many tests at each m
-        for m in [10, 20, 30, 40, 50]:  # run for increasing number of moves from solved puzzle
+        # TRIALS = [10, 20, 30, 40, 50]
+        TRIALS = [10]
+        for m in TRIALS:  # run for increasing number of moves from solved puzzle
 
             runData['astar']['cityBlock'][m] = []
             runData['astar']['myHeuristic'][m] = []
@@ -123,7 +125,8 @@ class TestPuzzle(unittest.TestCase):
                 (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, aStar,
                                                                              heuristicMy)
                 heuristicPct = heuristicTime / runTime * 100
-                runData['astar']['myHeuristic'][m].append([moves, nodesChecked, runTime, solutionFound])
+                runData['astar']['myHeuristic'][m].append(
+                    [moves, nodesChecked, runTime, solutionFound, heuristicPct, heuristicTime])
                 print('aStar w/ myHeuristic: moves=%3d, nodes=%5d, time=%1.6f, heuristicPct=%2.4f' % (
                     moves, nodesChecked, runTime, heuristicPct))
 
@@ -140,7 +143,8 @@ class TestPuzzle(unittest.TestCase):
                 heuristicTime = 0  # reset heuristic timer
                 (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, rbfs, heuristicMy)
                 heuristicPct = heuristicTime / runTime * 100
-                runData['rbfs']['myHeuristic'][m].append([moves, nodesChecked, runTime, solutionFound, heuristicTime])
+                runData['rbfs']['myHeuristic'][m].append(
+                    [moves, nodesChecked, runTime, solutionFound, heuristicPct, heuristicTime])
                 print('rbfs  w/ myHeuristic: moves=%3d, nodes=%5d, time=%f, heuristicPct=%2.4f' % (
                     moves, nodesChecked, runTime, heuristicPct))
 
