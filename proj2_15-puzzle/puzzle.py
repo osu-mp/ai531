@@ -12,7 +12,6 @@ from queue import PriorityQueue
 from sys import maxsize
 from typing import Dict
 
-# heuristicTime = 0
 import main
 
 """
@@ -43,7 +42,7 @@ To study how the amount of search varies with the problem difficulty, we will ge
 For each m, plot the average time consumed, nodes searched, and the optimal solution lengths for the 2 algorithms and the 2 heuristics. You might find that your algorithm is taking too long for some inputs and heuristics. Bound the time and/or the number of nodes searched to a maximum and report what fraction of the problems are solved in that bound. Report the other statistics on the solved problems.
 """
 
-emptySquare = '_'
+emptySquare = '_' # empty tile (only place that adjacent tiles can move)
 puzzleSize = 4  # number of rows and cols for puzzle (4 means 4x4 grid with 15 numbers and one emtpy cell)
 collectData = True  # set to True to generate test data (long runtime)
 csvFilename = 'data.csv'  # where test runtimes are written
@@ -84,7 +83,7 @@ class Puzzle:
             # self.size = len(self.tiles)
             assert all(len(e) == len(self.tiles) for e in self.tiles)
 
-        self.evalFunc = self.cost  #
+        self.evalFunc = self.cost  # start as cost, rbfs will update during search to cost + estimate
         Puzzle.totalNodes += 1
         self.target_pos = self.generateTargetPosition()
 
@@ -110,6 +109,8 @@ class Puzzle:
         [13, 14, 15, emptySquare]
         :return:
         """
+	# TODO : cache the solved solution
+	
         puzzle = []
         for row in range(puzzleSize):
             line = []
@@ -177,7 +178,7 @@ class Puzzle:
 
     def print(self):
         """
-        Print the current configuration (for debug)
+        Print the tile current configuration (for debug)
         :return:
         """
         str = ""
@@ -191,8 +192,10 @@ class Puzzle:
         print(str)
         return str
 
-    #
     def __str__(self):
+	"""
+	Print the tile current config (for debug)
+	"""
         return self.print()
 
     def getPosition(self, target):
@@ -291,37 +294,8 @@ class Puzzle:
         moves = moves[:-1]
         moves.reverse()
 
-        # moveStr = ", ".join(moves)
-
-
-# def heuristicCityBlock(puzzle):
-#     """
-#     City block heuristic: estimate number of moves for each tile to intended location
-#     This is admissible since it never over-estimates the number of moves
-#     :return:
-#     """
-#     # for each tile, count the number of moves to its intended position (assume no other tiles)
-#     sum = 0
-#
-#     for row in range(puzzleSize):
-#         for col in range(puzzleSize):
-#             # expected tile position (+1 because arrays start at 0, tiles start at 1)
-#             expectedTile = row * puzzleSize + col + 1
-#
-#             # the last spot in the board is reserved for empty space, ignore for this heuristic
-#             if expectedTile == (puzzleSize * puzzleSize):
-#                 continue
-#
-#             # get location of expected tile and calculate distance (absolute in case it moves up/left)
-#             actRow, actCol = puzzle.getPosition(expectedTile)
-#             dist = abs(actRow - row) + abs(actCol - col)
-#             # if debug:
-#             #     print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
-#
-#             sum += dist
-#
-#     return sum
-
+        moveStr = ", ".join(moves)
+	print("Solution: %s" % moveStr)
 
 def heuristicCityBlock(puzzle: Puzzle):
     """
@@ -329,13 +303,10 @@ def heuristicCityBlock(puzzle: Puzzle):
     This is admissible since it never over-estimates the number of moves
     :return:
     """
-
     start = time.time()
 
     # for each tile, count the number of moves to its intended position (assume no other tiles)
     sum = 0
-    # puzzle.print()
-
     for row in range(puzzleSize):
         for col in range(puzzleSize):
             val = puzzle.tiles[row][col]
@@ -352,47 +323,6 @@ def heuristicCityBlock(puzzle: Puzzle):
     main.heuristicTime += runtime
 
     return sum
-
-
-# def heuristicMy(puzzle):
-#     """
-#     Heuristic defined by us
-#     Use the city block estimate plus the distance to the empty square
-#     This is not admissible since it may over-estimate the number of moves
-#     -i.e. if the give tile is one move away from its intended location and the emtpy square
-#     is there, it only needs to move once (but this algo returns 2 for that tile)
-#     :return:
-#     """
-#     sum = 0
-#     (emptyRow, emptyCol) = puzzle.getEmptyPosition()
-#
-#     for row in range(puzzleSize):
-#         for col in range(puzzleSize):
-#             # expected tile position (+1 because arrays start at 0, tiles start at 1)
-#             expectedTile = row * puzzleSize + col + 1
-#
-#             # the last spot in the board is reserved for empty space, ignore for this heuristic
-#             if expectedTile == (puzzleSize * puzzleSize):
-#                 continue
-#
-#             # get location of expected tile and calculate distance (absolute in case it moves up/left)
-#             actRow, actCol = puzzle.getPosition(expectedTile)
-#             dist = abs(actRow - row) + abs(actCol - col)
-#             if debug:
-#                 print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
-#
-#             # if at correct spot, do not consider moving empty tile
-#             if dist == 0:
-#                 continue
-#
-#             # otherwise add distance to empty tile (this makes the algo not admissible)
-#             emptyDist = abs(actRow - emptyRow) + abs(actCol - emptyCol)
-#             if debug:
-#                 print('myHeuristic moves from emtpy: %d' % emptyDist)
-#             sum += dist + emptyDist
-#
-#     return sum
-
 
 def aStar(tiles, whichHeuristic):
     """
@@ -439,8 +369,6 @@ def aStar(tiles, whichHeuristic):
 
 
 nodesChecked = 0  # global var to keep track of nodes checked in rbfs (both searches should reset at start)
-
-
 def rbfs(tiles, whichHeuristic):
     global nodesChecked
 
@@ -503,9 +431,7 @@ def rbfsMain(node, fLimit, whichHeuristic):
         (altF, altPos, altNode) = successors[1]
         minF = min(fLimit, altF)
 
-        # fBefore = bestNode.evalFunc
         (result, bestNode.evalFunc) = rbfsMain(bestNode, minF, whichHeuristic)
-        # print(f'Backout fBefore={fBefore}, fAfter={bestNode.evalFunc}')
         successors[0] = (bestNode.evalFunc, bestPos, bestNode)
 
         if result != None:
