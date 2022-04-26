@@ -8,12 +8,12 @@
 import copy
 import random
 import time
-
 from queue import PriorityQueue
 from sys import maxsize
-from typing import List, Dict
+from typing import Dict
 
-heuristicTime = 0
+# heuristicTime = 0
+import main
 
 """
 Assignment Description
@@ -44,14 +44,14 @@ For each m, plot the average time consumed, nodes searched, and the optimal solu
 """
 
 emptySquare = '_'
-puzzleSize = 4              # number of rows and cols for puzzle (4 means 4x4 grid with 15 numbers and one emtpy cell)
-collectData = True          # set to True to generate test data (long runtime)
-csvFilename = 'data.csv'    # where test runtimes are written
-debug = False               # prints debug messages when enabled
-maxNodesPerSearch = 50000    # max nodes to search before rbfs gives up
+puzzleSize = 4  # number of rows and cols for puzzle (4 means 4x4 grid with 15 numbers and one emtpy cell)
+collectData = True  # set to True to generate test data (long runtime)
+csvFilename = 'data.csv'  # where test runtimes are written
+debug = False  # prints debug messages when enabled
+maxNodesPerSearch = 50000  # max nodes to search before rbfs gives up
 
-moveL = 'L'                 # movement the empty tile can do: left, right, up, down
-moveR = 'R'                 # if tile is on an edge, some movements will not be allowed
+moveL = 'L'  # movement the empty tile can do: left, right, up, down
+moveR = 'R'  # if tile is on an edge, some movements will not be allowed
 moveU = 'U'
 moveD = 'D'
 
@@ -60,19 +60,19 @@ class Puzzle:
     totalNodes = 0  # global counter of total nodes in total tree
 
     def __init__(self, tiles=None, parent=None, move=None, cost=0):
-        self.tiles = tiles      # state of all tiles (2D array)
-        self.parent = parent    # parent node of this puzzle (None=root node)
-        self.move = move        # direction the empty tile was moved to get here (from parent)
+        self.tiles = tiles  # state of all tiles (2D array)
+        self.parent = parent  # parent node of this puzzle (None=root node)
+        self.move = move  # direction the empty tile was moved to get here (from parent)
 
-        if not tiles:           # if board config is not given, start with solved board
+        if not tiles:  # if board config is not given, start with solved board
             self.tiles = self.getSolvedPuzzle()
 
-        if parent:              # total cost to get here is parent + node cost (1)
+        if parent:  # total cost to get here is parent + node cost (1)
             self.cost = parent.cost + cost
         else:
             self.cost = cost
 
-        self.evalFunc = self.cost   # estimate value (updated by search funcs)
+        self.evalFunc = self.cost  # estimate value (updated by search funcs)
 
         if debug:
             print('New node: move=%s, cost=%s' % (self.move, self.cost))
@@ -136,14 +136,14 @@ class Puzzle:
         :return: Nothing (self.tiles is now scrambled)
         """
         moves = []
-        lastMove = None                                     # do not repeat the same move (both moves can
+        lastMove = None  # do not repeat the same move (both moves can
 
         for i in range(m):
             # get possible move directions
             possibleMoves = self.getEmptyMoves()
 
             # ensure the next move is not the opposite of the last (would undo previous move)
-            if lastMove:                                    # does not apply to first iteration since there is no prev
+            if lastMove:  # does not apply to first iteration since there is no prev
                 reverse = self.getReverseMove(lastMove)
                 possibleMoves.remove(reverse)
 
@@ -166,11 +166,11 @@ class Puzzle:
         :param move:
         :return:
         """
-        if move == moveU:           # opposite of up is down
+        if move == moveU:  # opposite of up is down
             return moveD
         elif move == moveD:
             return moveU
-        elif move == moveL:         # left and right are opposites
+        elif move == moveL:  # left and right are opposites
             return moveR
         elif move == moveR:
             return moveL
@@ -221,13 +221,13 @@ class Puzzle:
         row, col = self.getEmptyPosition()
 
         moves = []
-        if row > 0:                     # up (cannot be on top/first row)
+        if row > 0:  # up (cannot be on top/first row)
             moves.append(moveU)
-        if col > 0:                     # left (cannot be on left col)
+        if col > 0:  # left (cannot be on left col)
             moves.append(moveL)
-        if col < puzzleSize - 1:        # right (cannot be on right column)
+        if col < puzzleSize - 1:  # right (cannot be on right column)
             moves.append(moveR)
-        if row < puzzleSize - 1:        # down (cannot be on bottom row)
+        if row < puzzleSize - 1:  # down (cannot be on bottom row)
             moves.append(moveD)
 
         return moves
@@ -291,7 +291,7 @@ class Puzzle:
         moves = moves[:-1]
         moves.reverse()
 
-        moveStr = ", ".join(moves)
+        # moveStr = ", ".join(moves)
 
 
 # def heuristicCityBlock(puzzle):
@@ -329,7 +329,7 @@ def heuristicCityBlock(puzzle: Puzzle):
     This is admissible since it never over-estimates the number of moves
     :return:
     """
-    # global heuristicTime
+
     start = time.time()
 
     # for each tile, count the number of moves to its intended position (assume no other tiles)
@@ -338,12 +338,7 @@ def heuristicCityBlock(puzzle: Puzzle):
 
     for row in range(puzzleSize):
         for col in range(puzzleSize):
-            try:
-                val = puzzle.tiles[row][col]
-            except Exception:
-                print(f'Exception at {row},{col}')
-                print(puzzle.tiles)
-                a = 1
+            val = puzzle.tiles[row][col]
             if val == emptySquare:
                 continue
             actRow, actCol = puzzle.getTargetPosition(val)
@@ -354,48 +349,49 @@ def heuristicCityBlock(puzzle: Puzzle):
 
     end = time.time()
     runtime = end - start
-
-    return sum, runtime
-
-
-def heuristicMy(puzzle):
-    """
-    Heuristic defined by us
-    Use the city block estimate plus the distance to the empty square
-    This is not admissible since it may over-estimate the number of moves
-    -i.e. if the give tile is one move away from its intended location and the emtpy square
-    is there, it only needs to move once (but this algo returns 2 for that tile)
-    :return:
-    """
-    sum = 0
-    (emptyRow, emptyCol) = puzzle.getEmptyPosition()
-
-    for row in range(puzzleSize):
-        for col in range(puzzleSize):
-            # expected tile position (+1 because arrays start at 0, tiles start at 1)
-            expectedTile = row * puzzleSize + col + 1
-
-            # the last spot in the board is reserved for empty space, ignore for this heuristic
-            if expectedTile == (puzzleSize * puzzleSize):
-                continue
-
-            # get location of expected tile and calculate distance (absolute in case it moves up/left)
-            actRow, actCol = puzzle.getPosition(expectedTile)
-            dist = abs(actRow - row) + abs(actCol - col)
-            if debug:
-                print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
-
-            # if at correct spot, do not consider moving empty tile
-            if dist == 0:
-                continue
-
-            # otherwise add distance to empty tile (this makes the algo not admissible)
-            emptyDist = abs(actRow - emptyRow) + abs(actCol - emptyCol)
-            if debug:
-                print('myHeuristic moves from emtpy: %d' % emptyDist)
-            sum += dist + emptyDist
+    main.heuristicTime += runtime
 
     return sum
+
+
+# def heuristicMy(puzzle):
+#     """
+#     Heuristic defined by us
+#     Use the city block estimate plus the distance to the empty square
+#     This is not admissible since it may over-estimate the number of moves
+#     -i.e. if the give tile is one move away from its intended location and the emtpy square
+#     is there, it only needs to move once (but this algo returns 2 for that tile)
+#     :return:
+#     """
+#     sum = 0
+#     (emptyRow, emptyCol) = puzzle.getEmptyPosition()
+#
+#     for row in range(puzzleSize):
+#         for col in range(puzzleSize):
+#             # expected tile position (+1 because arrays start at 0, tiles start at 1)
+#             expectedTile = row * puzzleSize + col + 1
+#
+#             # the last spot in the board is reserved for empty space, ignore for this heuristic
+#             if expectedTile == (puzzleSize * puzzleSize):
+#                 continue
+#
+#             # get location of expected tile and calculate distance (absolute in case it moves up/left)
+#             actRow, actCol = puzzle.getPosition(expectedTile)
+#             dist = abs(actRow - row) + abs(actCol - col)
+#             if debug:
+#                 print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
+#
+#             # if at correct spot, do not consider moving empty tile
+#             if dist == 0:
+#                 continue
+#
+#             # otherwise add distance to empty tile (this makes the algo not admissible)
+#             emptyDist = abs(actRow - emptyRow) + abs(actCol - emptyCol)
+#             if debug:
+#                 print('myHeuristic moves from emtpy: %d' % emptyDist)
+#             sum += dist + emptyDist
+#
+#     return sum
 
 
 def aStar(tiles, whichHeuristic):
@@ -403,7 +399,7 @@ def aStar(tiles, whichHeuristic):
     A* search
     :return: Solution node (or None if no solution found), fLimit, nodes checked, moves
     """
-    global  count
+    global count
     count = 0
     node = None
     expanded = []
@@ -414,6 +410,7 @@ def aStar(tiles, whichHeuristic):
     estimate = whichHeuristic(parentNode)
     # put the parent node, node count, and heuristic value in the queue
     Q.put((estimate, count, parentNode))
+    # heuristic_time = 0
 
     while not Q.empty():
         if count >= maxNodesPerSearch:
@@ -432,11 +429,17 @@ def aStar(tiles, whichHeuristic):
             if child.tiles not in expanded:
                 count += 1
                 # get new F value
-                (heuristicEst, runtime) = whichHeuristic(child)
-                (estimate,  = child.cost + heuristicEst
+                # heuristicEst, runtime = whichHeuristic(child)
+                # estimate = child.cost + heuristicEst
+                # heuristic_time += runtime
+                estimate = child.cost + whichHeuristic(child)
                 Q.put((estimate, count, child))
 
-nodesChecked = 0                                # global var to keep track of nodes checked in rbfs (both searches should reset at start)
+    return node, None, count, node.cost
+
+
+nodesChecked = 0  # global var to keep track of nodes checked in rbfs (both searches should reset at start)
+
 
 def rbfs(tiles, whichHeuristic):
     global nodesChecked
@@ -479,7 +482,7 @@ def rbfsMain(node, fLimit, whichHeuristic):
     if len(children) == 0:
         return None, maxsize
 
-    childPos = 0        # used to differentiate between nodes with the same f value
+    childPos = 0  # used to differentiate between nodes with the same f value
 
     for child in children:
         childPos += 1

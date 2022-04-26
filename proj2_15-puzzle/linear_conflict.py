@@ -1,3 +1,6 @@
+import time
+
+import main
 from puzzle import Puzzle, emptySquare, puzzleSize, heuristicCityBlock
 
 
@@ -89,7 +92,9 @@ def count_conflicts_col(puzzle: Puzzle, col_id: int):
     return res
 
 
-def linear_conflict_heuristic(puzzle: Puzzle):
+def heuristicMy(puzzle: Puzzle):
+    # global heuristicTime
+    start = time.time()
     cnt_conflicts = 0
     city_block = heuristicCityBlock(puzzle)
     for i in range(puzzleSize):
@@ -98,5 +103,6 @@ def linear_conflict_heuristic(puzzle: Puzzle):
     for i in range(puzzleSize):
         cnt_conflicts += count_conflicts_col(puzzle, i)
     # print(f'{res=}')
+    main.heuristicTime += time.time() - start
 
     return city_block + cnt_conflicts
