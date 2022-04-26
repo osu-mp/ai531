@@ -451,6 +451,10 @@ def rbfsMain(node, fLimit, whichHeuristic):
 
     return result, None
 
+if __name__ == '__main__':
+    unittest.main()
+
+
 class TestPuzzle(unittest.TestCase):
 
     def test_scramble(self):
@@ -728,8 +732,4 @@ class TestPuzzle(unittest.TestCase):
         expected += (1 + 2) + (1 + 3) + (1 + 2) + (1 + 3) + (2 + 2) + 0 + (2 + 4)
         #            9         10        11       12        13        14   15
         self.assertEqual(expected, heuristicMy(puzzle))
-
-
-if __name__ == '__main__':
-    unittest.main()
 
