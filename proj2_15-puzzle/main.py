@@ -112,9 +112,11 @@ class TestPuzzle(unittest.TestCase):
                 print('aStar w/ cityBlock: moves=%3d, nodes=%5d, time=%1.6f, heuristicPct=%2.4f' % (moves, nodesChecked, runTime, heuristicPct))
 
                 # astar with my heuristic
-                # (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, aStar, heuristicMy)
-                # runData['astar']['myHeuristic'][m].append([moves, nodesChecked, runTime, solutionFound])
-                # print('aStar w/ myHeur:    moves=%3d, nodes=%5d, time=%1.6f' % (moves, nodesChecked, runTime))
+                heuristicTime = 0                           # reset heuristic timer
+                (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, aStar, linear_conflict_heuristic)
+                heuristicPct = heuristicTime / runTime * 100
+                runData['astar']['myHeuristic'][m].append([moves, nodesChecked, runTime, solutionFound])
+                print('aStar w/ myHeur:    moves=%3d, nodes=%5d, time=%1.6f' % (moves, nodesChecked, runTime))
 
                 # rbfs with city block heuristic
                 heuristicTime = 0                           # reset heuristic timer
@@ -124,9 +126,11 @@ class TestPuzzle(unittest.TestCase):
                 print('rbfs  w/ cityBlock: moves=%3d, nodes=%5d, time=%f, heuristicPct=%2.4f' % (moves, nodesChecked, runTime, heuristicPct))
 
                 # rbfs with my heuristic
-                # (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, rbfs, heuristicMy)
-                # runData['rbfs']['myHeuristic'][m].append([moves, nodesChecked, runTime, solutionFound])
-                # print('rbfs  w/ myHeur:    moves=%3d, nodes=%5d, time=%f' % (moves, nodesChecked, runTime))
+                heuristicTime = 0                           # reset heuristic timer
+                (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, rbfs, linear_conflict_heuristic)
+                heuristicPct = heuristicTime / runTime * 100
+                runData['rbfs']['myHeuristic'][m].append([moves, nodesChecked, runTime, solutionFound])
+                print('rbfs  w/ myHeur:    moves=%3d, nodes=%5d, time=%f' % (moves, nodesChecked, runTime))
 
         # now that all data has been collected, write it grouped by algo/heuristic
         for algo in runData:

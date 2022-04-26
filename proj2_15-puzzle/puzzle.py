@@ -45,7 +45,7 @@ For each m, plot the average time consumed, nodes searched, and the optimal solu
 
 emptySquare = '_'
 puzzleSize = 4              # number of rows and cols for puzzle (4 means 4x4 grid with 15 numbers and one emtpy cell)
-collectData = False          # set to True to generate test data (long runtime)
+collectData = True          # set to True to generate test data (long runtime)
 csvFilename = 'data.csv'    # where test runtimes are written
 debug = False               # prints debug messages when enabled
 maxNodesPerSearch = 50000    # max nodes to search before rbfs gives up
@@ -329,7 +329,7 @@ def heuristicCityBlock(puzzle: Puzzle):
     This is admissible since it never over-estimates the number of moves
     :return:
     """
-    global heuristicTime
+    # global heuristicTime
     start = time.time()
 
     # for each tile, count the number of moves to its intended position (assume no other tiles)
@@ -353,9 +353,9 @@ def heuristicCityBlock(puzzle: Puzzle):
             sum += dist
 
     end = time.time()
-    heuristicTime += end - start
+    runtime = end - start
 
-    return sum
+    return sum, runtime
 
 
 def heuristicMy(puzzle):
@@ -432,7 +432,8 @@ def aStar(tiles, whichHeuristic):
             if child.tiles not in expanded:
                 count += 1
                 # get new F value
-                estimate = child.cost + whichHeuristic(child)
+                (heuristicEst, runtime) = whichHeuristic(child)
+                (estimate,  = child.cost + heuristicEst
                 Q.put((estimate, count, child))
 
 nodesChecked = 0                                # global var to keep track of nodes checked in rbfs (both searches should reset at start)
