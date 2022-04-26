@@ -37,6 +37,7 @@ class TestPuzzle(unittest.TestCase):
         self.assertEqual(3, row)
         self.assertEqual(3, col)
 
+
     def runTest(self, tiles, searchFunc, heuristic):
         """
         Run the specified search function using given heuristic and return runtime in seconds
@@ -56,7 +57,7 @@ class TestPuzzle(unittest.TestCase):
 
         return (nodesChecked, moves, end - start, solutionFound)              # return number of nodes checked and runtime
 
-    def test_data_collection(self):
+      def test_data_collection(self):
         """
         Try all combinations of searches and collect performance data into a csv
         :return:
@@ -71,6 +72,7 @@ class TestPuzzle(unittest.TestCase):
         # TODO save to csv
         csvFH = open(csvFilename, 'w', newline='')
         writer = csv.writer(csvFH)
+
         writer.writerow(['m', 'puzzleNum', 'searchFunc', 'heuristic', 'moves', 'nodesChecked', 'runTime (seconds)', 'solutionFound', 'heuristic % runTime', 'heuristic time'])
 
         # collect data into run data and write it later
@@ -91,6 +93,7 @@ class TestPuzzle(unittest.TestCase):
             for n in range(numTrials):                             # TODO : run 10 trials at each m
                 base = Puzzle()
                 base.scramblePuzzle(m)         # ensure all 4 configurations use the same scrambled puzzle
+
                 baseTiles = base.tiles
                 print('Puzzle Number %d (m=%d)' % (n, m))
                 base.print()
@@ -146,6 +149,7 @@ class TestPuzzle(unittest.TestCase):
                     timeAvg = "%.4f" % (timeSum / numTrials)
                     solnAvg = int(solnCount / numTrials * 100)
                     print(f' & {mValue} & {timeAvg} & {nodeAvg} & {moveAvg} & {solnAvg} \\\\')
+
         print('Data collection complete, results written to: %s' % csvFilename)
 
     def test_rbfs(self):
@@ -230,6 +234,18 @@ class TestPuzzle(unittest.TestCase):
             print('Solved with cost %d' % node.cost)
         self.assertEqual(2, node.cost)
 
+    def test_rbfs_m_values(self):
+        m = 8
+        puzzle = Puzzle()
+        puzzle.scramblePuzzle(m)
+        # puzzle.moveToEmptyCell(15)
+        # puzzle.moveToEmptyCell(11)
+        # puzzle.moveToEmptyCell(10)
+        print("Solving puzzle below")
+        puzzle.print()
+        (node, fLimit, nodesChecked) = rbfs(puzzle.tiles, heuristicMy)
+        self.assertTrue(node.cost <= m, 'Solution took move moves than scramble')
+
     def test_cityBlock(self):
         """
         Unit tests for city block heuristic
@@ -284,3 +300,47 @@ class TestPuzzle(unittest.TestCase):
         #            9         10        11       12        13        14   15
         self.assertEqual(expected, heuristicMy(puzzle))
 
+    def test_linearconflict(self):
+        puzzle = Puzzle(tiles=[[emptySquare, 2, 1], [7, 4, 5], [6, 3, 8]])
+        print(f'{linear_conflict_heuristic(puzzle)=}')
+
+    def test_getTargetPosition(self):
+        puzzle = Puzzle()
+        print(f'{puzzle.target_pos=}')
+        self.assertEqual(puzzle.getTargetPosition(4), (0, 3))
+
+    def test_astart_linearconfict(self):
+        # base case: already solved puzzle (0 moves)
+        heuristic = linear_conflict_heuristic
+
+        puzzle = Puzzle()
+        (node, fLimit, count) = aStar(puzzle.tiles, heuristic)
+        print('node %s' % node)
+        self.assertEqual(0, node.cost)
+
+        # simple case: puzzle off by one move
+        puzzle = Puzzle()
+        puzzle.moveToEmptyCell(15)
+        print("Solving puzzle below")
+        puzzle.print()
+        (node, fLimit, count) = aStar(puzzle.tiles, heuristic)
+        if node:
+            print('Solved with cost %d' % node.cost)
+        self.assertEqual(1, node.cost)
+
+        # simple case: puzzle off by 2 moves
+        puzzle = Puzzle()
+        puzzle.moveToEmptyCell(15)
+        puzzle.moveToEmptyCell(11)
+        print("Solving puzzle below")
+        puzzle.print()
+        (node, fLimit, count) = aStar(puzzle.tiles, heuristic)
+        if node:
+            print('Solved with cost %d' % node.cost)
+            print(node)
+        self.assertEqual(2, node.cost)
+
+
+if __name__ == '__main__':
+    unittest.main()
+   
