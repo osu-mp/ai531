@@ -10,6 +10,7 @@ import random
 
 from queue import PriorityQueue
 from sys import maxsize
+from typing import List, Dict
 
 """
 Assignment Description
@@ -57,7 +58,7 @@ class Puzzle:
 
     def __init__(self, tiles=None, parent=None, move=None, cost=0):
         # self.puzzle = self.getSolvedPuzzle()
-        self.tiles = tiles  # state of all tiles (2D array)
+        self.tiles = tiles  # type: List[List] # state of all tiles (2D array)
         self.parent = parent  # parent node of this puzzle (None=root node)
         self.move = move  # direction the empty tile was moved to get here (from parent)
 
@@ -69,11 +70,28 @@ class Puzzle:
         if debug:
             print('New node: move=%s, cost=%s' % (self.move, self.cost))
 
-        if not tiles:
+        if tiles is None:
+            # self.size = puzzleSize
             self.tiles = self.getSolvedPuzzle()
+        else:
+            # self.size = len(self.tiles)
+            assert all(len(e) == len(self.tiles) for e in self.tiles)
 
         self.evalFunc = self.cost  #
         Puzzle.totalNodes += 1
+        self.target_pos = self.generateTargetPosition()
+
+    def generateTargetPosition(self) -> Dict[int, tuple]:
+        target = self.getSolvedPuzzle()
+        target_pos = {}
+        for i in range(puzzleSize):
+            for j in range(puzzleSize):
+                target_val = target[i][j]
+                target_pos[target_val] = (i, j)
+        return target_pos
+
+    def getTargetPosition(self, val) -> tuple:
+        return self.target_pos[val]
 
     def getSolvedPuzzle(self):
         """
@@ -141,6 +159,11 @@ class Puzzle:
                     str += "%2d " % col
             str += "\n"
         print(str)
+        return str
+
+    #
+    def __str__(self):
+        return self.print()
 
     def getPosition(self, target):
         """
@@ -282,7 +305,7 @@ class Puzzle:
 
         moveStr = ", ".join(moves)
         # TODO include length
-        print("Solution: %s" % moveStr)
+        # print(f"Solution: {moveStr=}, {self.cost=}")
 
     def getPuzzleId(self, puzzle):
         """
@@ -306,7 +329,36 @@ class Puzzle:
         return sum
 
 
-def heuristicCityBlock(puzzle):
+# def heuristicCityBlock(puzzle):
+#     """
+#     City block heuristic: estimate number of moves for each tile to intended location
+#     This is admissible since it never over-estimates the number of moves
+#     :return:
+#     """
+#     # for each tile, count the number of moves to its intended position (assume no other tiles)
+#     sum = 0
+#
+#     for row in range(puzzleSize):
+#         for col in range(puzzleSize):
+#             # expected tile position (+1 because arrays start at 0, tiles start at 1)
+#             expectedTile = row * puzzleSize + col + 1
+#
+#             # the last spot in the board is reserved for empty space, ignore for this heuristic
+#             if expectedTile == (puzzleSize * puzzleSize):
+#                 continue
+#
+#             # get location of expected tile and calculate distance (absolute in case it moves up/left)
+#             actRow, actCol = puzzle.getPosition(expectedTile)
+#             dist = abs(actRow - row) + abs(actCol - col)
+#             # if debug:
+#             #     print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
+#
+#             sum += dist
+#
+#     return sum
+
+
+def heuristicCityBlock(puzzle: Puzzle):
     """
     City block heuristic: estimate number of moves for each tile to intended location
     This is admissible since it never over-estimates the number of moves
@@ -314,22 +366,17 @@ def heuristicCityBlock(puzzle):
     """
     # for each tile, count the number of moves to its intended position (assume no other tiles)
     sum = 0
+    # puzzle.print()
 
     for row in range(puzzleSize):
         for col in range(puzzleSize):
-            # expected tile position (+1 because arrays start at 0, tiles start at 1)
-            expectedTile = row * puzzleSize + col + 1
-
-            # the last spot in the board is reserved for empty space, ignore for this heuristic
-            if expectedTile == (puzzleSize * puzzleSize):
+            val = puzzle.tiles[row][col]
+            if val == emptySquare:
                 continue
-
-            # get location of expected tile and calculate distance (absolute in case it moves up/left)
-            actRow, actCol = puzzle.getPosition(expectedTile)
+            actRow, actCol = puzzle.getTargetPosition(val)
             dist = abs(actRow - row) + abs(actCol - col)
-            # if debug:
-            #     print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
-
+            if debug:
+                print(f'{actRow=}, {actCol=}, {val=}, {dist=}')
             sum += dist
 
     return sum
@@ -405,7 +452,7 @@ def aStar(tiles, whichHeuristic):
             if child.tiles not in expanded:
                 count += 1
                 # get new F value
-                estimate = whichHeuristic(child)
+                estimate = node.cost + whichHeuristic(child)
                 Q.put((estimate, count, child))
 
     # print('astar search with %s (estimate %d)' % (whichHeuristic.__name__, estimate))
@@ -421,19 +468,6 @@ def rbfs(tiles, whichHeuristic):
 
     count = 0
     nodesChecked = 0
-
-    puzzle = Puzzle(tiles, None, None, 0)
-    (node, fLimit) = rbfsMain(puzzle, maxsize, whichHeuristic)
-    if node:
-        node.printSolution()
-        return (node, fLimit, nodesChecked)
-    else:
-        print("No solution found")
-        return (None, maxsize, nodesChecked)
-
-
-def rbfsMain(node, fLimit, whichHeuristic):
-    global count, nodesChecked
 
     puzzle = Puzzle(tiles, None, None, 0)
     (node, fLimit) = rbfsMain(puzzle, maxsize, whichHeuristic)

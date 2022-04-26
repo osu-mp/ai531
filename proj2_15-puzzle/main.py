@@ -2,6 +2,7 @@ import csv
 import time
 import unittest
 
+from linear_conflict import linear_conflict_heuristic
 from puzzle import Puzzle, emptySquare, collectData, csvFilename, rbfs, heuristicCityBlock, heuristicMy, aStar
 
 
@@ -156,42 +157,51 @@ class TestPuzzle(unittest.TestCase):
 
         # collect data into run data and write it later
         runData = {}
+        second_label = 'linear_conflict_heuristic'
+        second_heuristic = linear_conflict_heuristic
+
         for algo in ['astar', 'rbfs']:
             runData[algo] = {}
-            for heuristic in ['cityBlock', 'myHeuristic']:
+            for heuristic in ['cityBlock', second_label]:
                 runData[algo][heuristic] = {}
 
+        NUM_TRIALS = 5
         puzzle = Puzzle()
-        for m in [
-            10]:  # , 20, 30, 40, 50]:                      # run for increasing number of moves from solved puzzle
-
+        # run for increasing number of moves from solved puzzle
+        LOOPS = [10, 20, 30, 40, 50]
+        for m in LOOPS:  # , 20, 30, 40, 50]:
             runData['astar']['cityBlock'][m] = []
-            runData['astar']['myHeuristic'][m] = []
+            runData['astar'][second_label][m] = []
             runData['rbfs']['cityBlock'][m] = []
-            runData['rbfs']['myHeuristic'][m] = []
+            runData['rbfs'][second_label][m] = []
 
-            for n in range(5):  # TODO : run 10 trials at each m
+            for n in range(NUM_TRIALS):  # TODO : run 10 trials at each m
                 base = Puzzle()
                 base.scramblePuzzle(m)  # ensure all 4 configurations use the same scrambled puzzle
                 baseTiles = base.tiles
                 print('Puzzle Number %d (m=%d)' % (n, m))
                 base.print()
 
-                # # # astar with city block heuristic
-                # (nodesChecked, moves, runTime) = self.runTest(baseTiles, aStar, heuristicCityBlock)
-                # runData['astar']['cityBlock'][m].append([moves, nodesChecked, runTime])
-                #
-                # # astar with my heuristic
-                # (nodesChecked, moves, runTime) = self.runTest(baseTiles, aStar, heuristicMy)
-                # runData['astar']['myHeuristic'][m].append([moves, nodesChecked, runTime])
+                # astar with city block heuristic
+                (nodesChecked, moves, runTime) = self.runTest(baseTiles, aStar, heuristicCityBlock)
+                runData['astar']['cityBlock'][m].append([moves, nodesChecked, runTime])
+                print('aStar w/ cityBlock: moves=%3d, nodes=%5d, time=%1.6f' % (moves, nodesChecked, runTime))
+
+                # astar with my heuristic
+                (nodesChecked, moves, runTime) = self.runTest(baseTiles, aStar, second_heuristic)
+                runData['astar'][second_label][m].append([moves, nodesChecked, runTime])
+                print('aStar w/ myHeur:    moves=%3d, nodes=%5d, time=%1.6f' % (moves, nodesChecked, runTime))
 
                 # rbfs with city block heuristic
                 (nodesChecked, moves, runTime) = self.runTest(baseTiles, rbfs, heuristicCityBlock)
                 runData['rbfs']['cityBlock'][m].append([moves, nodesChecked, runTime])
+                print('rbfs  w/ cityBlock: moves=%3d, nodes=%5d, time=%f' % (moves, nodesChecked, runTime))
 
                 # rbfs with my heuristic
-                # (nodesChecked, moves, runTime) = self.runTest(baseTiles, rbfs, heuristicMy)
-                # runData['rbfs']['myHeuristic'][m].append([moves, nodesChecked, runTime])
+                (nodesChecked, moves, runTime) = self.runTest(baseTiles, rbfs, second_heuristic)
+                runData['rbfs'][second_label][m].append([moves, nodesChecked, runTime])
+                print('rbfs  w/ myHeur:    moves=%3d, nodes=%5d, time=%f' % (moves, nodesChecked, runTime))
+                print('')
 
         # now that all data has been collected, write it grouped by algo/heuristic
         for algo in runData:
@@ -250,7 +260,7 @@ class TestPuzzle(unittest.TestCase):
         :return:
         """
         puzzle = Puzzle()
-
+        #
         # base case: solved puzzle, city block should return 0
         self.assertEqual(0, heuristicCityBlock(puzzle))
 
@@ -328,8 +338,82 @@ class TestPuzzle(unittest.TestCase):
         (node, fLimit, count) = aStar(puzzle.tiles, heuristicCityBlock)
         if node:
             print('Solved with cost %d' % node.cost)
+            print(node)
+        self.assertEqual(2, node.cost)
+
+    def test_linearconflict(self):
+        puzzle = Puzzle(tiles=[[emptySquare, 2, 1], [7, 4, 5], [6, 3, 8]])
+        print(f'{linear_conflict_heuristic(puzzle)=}')
+
+    def test_getTargetPosition(self):
+        puzzle = Puzzle()
+        print(f'{puzzle.target_pos=}')
+        self.assertEqual(puzzle.getTargetPosition(4), (0, 3))
+
+    def test_astart_linearconfict(self):
+        # base case: already solved puzzle (0 moves)
+        heuristic = linear_conflict_heuristic
+
+        puzzle = Puzzle()
+        (node, fLimit, count) = aStar(puzzle.tiles, heuristic)
+        print('node %s' % node)
+        self.assertEqual(0, node.cost)
+
+        # simple case: puzzle off by one move
+        puzzle = Puzzle()
+        puzzle.moveToEmptyCell(15)
+        print("Solving puzzle below")
+        puzzle.print()
+        (node, fLimit, count) = aStar(puzzle.tiles, heuristic)
+        if node:
+            print('Solved with cost %d' % node.cost)
+        self.assertEqual(1, node.cost)
+
+        # simple case: puzzle off by 2 moves
+        puzzle = Puzzle()
+        puzzle.moveToEmptyCell(15)
+        puzzle.moveToEmptyCell(11)
+        print("Solving puzzle below")
+        puzzle.print()
+        (node, fLimit, count) = aStar(puzzle.tiles, heuristic)
+        if node:
+            print('Solved with cost %d' % node.cost)
+            print(node)
         self.assertEqual(2, node.cost)
 
 
 if __name__ == '__main__':
-    unittest.main()
+    # unittest.main()
+    # puzzle = Puzzle(tiles=[[3, 1, 2, 5],
+    #                        [6, 4, 14, 7],
+    #                        [8, 9, 10, 11],
+    #                        [12, 13, emptySquare, 15]])
+    # print(f'{linear_conflict_heuristic(puzzle)=}')
+
+    # puzzle = Puzzle()
+    # puzzle.scramblePuzzle(30)
+    # puzzle.print()
+    # heuristic = linear_conflict_heuristic
+    # (node, fLimit, count) = aStar(puzzle.tiles, heuristic)
+    # print('node %s' % node)
+    # node.print()
+    # print(node)
+
+    # print(puzzle)
+    puzzle = Puzzle()
+
+    scrambled = [
+        [4, 1, 3, 2],
+        [5, 6, emptySquare, 8],
+        [10, 9, 7, 11],
+        [15, 14, 13, 12]
+    ]
+
+    puzzle.tiles = scrambled
+
+    # using above puzzle, expected city block is (tiles 1 through 15 distances added):
+    # e.g. tile 1 is 1 spot away, tile 2 is 2, tile 3 is where it belongs, etc
+    expected = 1 + 2 + 0 + 3 + 0 + 0 + 1 + 0 + 1 + 1 + 1 + 1 + 2 + 0 + 2
+    # tiles    1   2   3   4   5   6   7   8   9  10  11  12  13  14  15
+
+    # print(f'expected = {expected}; heuristic={heuristicCityBlock(puzzle)}')
