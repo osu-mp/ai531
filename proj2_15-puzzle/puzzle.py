@@ -13,7 +13,7 @@ from sys import maxsize
 from typing import Dict
 
 # heuristicTime = 0
-import main
+import utility
 
 """
 Assignment Description
@@ -349,7 +349,7 @@ def heuristicCityBlock(puzzle: Puzzle):
 
     end = time.time()
     runtime = end - start
-    main.heuristicTime += runtime
+    utility.heuristicTime += runtime
 
     return sum
 

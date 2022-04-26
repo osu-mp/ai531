@@ -2,6 +2,7 @@ import csv
 import time
 import unittest
 
+import utility
 from linear_conflict import heuristicMy
 from puzzle import Puzzle, emptySquare, collectData, csvFilename, rbfs, heuristicCityBlock, aStar
 
@@ -9,8 +10,6 @@ moveL = 'L'  # movement the empty tile can do: left, right, up, down
 moveR = 'R'  # if tile is on an edge, some movements will not be allowed
 moveU = 'U'
 moveD = 'D'
-
-heuristicTime = 0
 
 
 class TestPuzzle(unittest.TestCase):
@@ -69,7 +68,7 @@ class TestPuzzle(unittest.TestCase):
         Try all combinations of searches and collect performance data into a csv
         :return:
         """
-        global heuristicTime
+        # global utility.heuristicTime
 
         # TODO : this has not been updated to new methods (4/23)
         # TODO : Matthew update after search functions complete
@@ -108,36 +107,36 @@ class TestPuzzle(unittest.TestCase):
                 base.print()
 
                 # # astar with city block heuristic
-                heuristicTime = 0  # reset heuristic timer
+                utility.heuristicTime = 0  # reset heuristic timer
                 (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, aStar, heuristicCityBlock)
-                heuristicPct = heuristicTime / runTime * 100
+                heuristicPct = utility.heuristicTime / runTime * 100
                 runData['astar']['cityBlock'][m].append(
-                    [moves, nodesChecked, runTime, solutionFound, heuristicPct, heuristicTime])
+                    [moves, nodesChecked, runTime, solutionFound, heuristicPct, utility.heuristicTime])
                 print('aStar w/ cityBlock: moves=%3d, nodes=%5d, time=%1.6f, heuristicPct=%2.4f' % (
                     moves, nodesChecked, runTime, heuristicPct))
 
                 # astar with my heuristic
-                heuristicTime = 0  # reset heuristic timer
+                utility.heuristicTime = 0  # reset heuristic timer
                 (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, aStar,
                                                                              heuristicMy)
-                heuristicPct = heuristicTime / runTime * 100
+                heuristicPct = utility.heuristicTime / runTime * 100
                 runData['astar']['myHeuristic'][m].append([moves, nodesChecked, runTime, solutionFound])
                 print('aStar w/ myHeuristic: moves=%3d, nodes=%5d, time=%1.6f, heuristicPct=%2.4f' % (
                     moves, nodesChecked, runTime, heuristicPct))
 
                 # rbfs with city block heuristic
-                heuristicTime = 0  # reset heuristic timer
+                utility.heuristicTime = 0  # reset heuristic timer
                 (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, rbfs, heuristicCityBlock)
-                heuristicPct = heuristicTime / runTime * 100
+                heuristicPct = utility.heuristicTime / runTime * 100
                 runData['rbfs']['cityBlock'][m].append(
-                    [moves, nodesChecked, runTime, solutionFound, heuristicPct, heuristicTime])
+                    [moves, nodesChecked, runTime, solutionFound, heuristicPct, utility.heuristicTime])
                 print('rbfs  w/ cityBlock: moves=%3d, nodes=%5d, time=%f, heuristicPct=%2.4f' % (
                     moves, nodesChecked, runTime, heuristicPct))
 
                 # rbfs with my heuristic
-                heuristicTime = 0  # reset heuristic timer
+                utility.heuristicTime = 0  # reset heuristic timer
                 (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, rbfs, heuristicMy)
-                heuristicPct = heuristicTime / runTime * 100
+                heuristicPct = utility.heuristicTime / runTime * 100
                 runData['rbfs']['myHeuristic'][m].append([moves, nodesChecked, runTime, solutionFound])
                 print('rbfs  w/ myHeuristic: moves=%3d, nodes=%5d, time=%f, heuristicPct=%2.4f' % (
                     moves, nodesChecked, runTime, heuristicPct))
@@ -154,10 +153,10 @@ class TestPuzzle(unittest.TestCase):
                     solnCount = 0
 
                     for puzzleNum, trial in enumerate(runData[algo][heuristic][mValue]):
-                        (moves, nodesChecked, runTime, solutionFound, heuristicPct, heuristicTime) = trial
+                        (moves, nodesChecked, runTime, solutionFound, heuristicPct, utility.heuristicTime) = trial
                         writer.writerow(
                             [mValue, puzzleNum, algo, heuristic, moves, nodesChecked, runTime, solutionFound,
-                             heuristicPct, heuristicTime])
+                             heuristicPct, utility.heuristicTime])
                         moveSum += moves
                         nodeSum += nodesChecked
                         timeSum += runTime
