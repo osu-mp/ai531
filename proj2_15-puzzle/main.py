@@ -12,8 +12,10 @@ moveD = 'D'
 
 heuristicTime = 0
 
-
 class TestPuzzle(unittest.TestCase):
+    """
+    Unit tests and data collection for 15 puzzle routines 
+    """
 
     def test_scramble(self):
         puzzle = Puzzle()
@@ -71,15 +73,14 @@ class TestPuzzle(unittest.TestCase):
         """
         global heuristicTime
 
-        # TODO : this has not been updated to new methods (4/23)
-        # TODO : Matthew update after search functions complete
         if not collectData:
             self.skipTest("Data collection skipped")
 
-        # TODO save to csv
+        # save raw data to csv file
         csvFH = open(csvFilename, 'w', newline='')
         writer = csv.writer(csvFH)
 
+        # header of csv 
         writer.writerow(
             ['m', 'puzzleNum', 'searchFunc', 'heuristic', 'moves', 'nodesChecked', 'runTime (seconds)', 'solutionFound',
              'heuristic % runTime', 'heuristic time'])
@@ -99,7 +100,7 @@ class TestPuzzle(unittest.TestCase):
             runData['rbfs']['cityBlock'][m] = []
             runData['rbfs']['myHeuristic'][m] = []
 
-            for n in range(numTrials):  # TODO : run 10 trials at each m
+            for n in range(numTrials):
                 base = Puzzle()
                 base.scramblePuzzle(m)  # ensure all 4 configurations use the same scrambled puzzle
 
@@ -170,6 +171,8 @@ class TestPuzzle(unittest.TestCase):
                     nodeAvg = int(nodeSum / numTrials)
                     timeAvg = "%.4f" % (timeSum / numTrials)
                     solnAvg = int(solnCount / numTrials * 100)
+                    
+                    # printout for tables in latex report
                     print(f' & {mValue} & {timeAvg} & {nodeAvg} & {moveAvg} & {solnAvg} \\\\')
 
         print('Data collection complete, results written to: %s' % csvFilename)
@@ -203,9 +206,10 @@ class TestPuzzle(unittest.TestCase):
         (node, fLimit, nodesChecked, moves) = rbfs(puzzle.tiles, heuristicCityBlock)
         self.assertEqual(2, node.cost)
 
-        # use puzzle scrambled by m moves
-
     def test_rbfs_m_values(self):
+        """
+        Test rbfs with randomly generated puzzle
+        """
         m = 20
         puzzle = Puzzle()
         puzzle.scramblePuzzle(m)
