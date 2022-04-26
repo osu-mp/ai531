@@ -6,13 +6,11 @@
 # Matthew Pacey
 
 import copy
-import csv
 import random
-import time
-import unittest
 
 from queue import PriorityQueue
 from sys import maxsize
+from typing import List, Dict
 
 """
 Assignment Description
@@ -54,7 +52,9 @@ moveR = 'R'                 # if tile is on an edge, some movements will not be 
 moveU = 'U'
 moveD = 'D'
 
+
 class Puzzle:
+    totalNodes = 0  # global counter of total nodes in total tree
 
     def __init__(self, tiles=None, parent=None, move=None, cost=0):
         self.tiles = tiles      # state of all tiles (2D array)
@@ -74,6 +74,29 @@ class Puzzle:
         if debug:
             print('New node: move=%s, cost=%s' % (self.move, self.cost))
 
+        if tiles is None:
+            # self.size = puzzleSize
+            self.tiles = self.getSolvedPuzzle()
+        else:
+            # self.size = len(self.tiles)
+            assert all(len(e) == len(self.tiles) for e in self.tiles)
+
+        self.evalFunc = self.cost  #
+        Puzzle.totalNodes += 1
+        self.target_pos = self.generateTargetPosition()
+
+    def generateTargetPosition(self) -> Dict[int, tuple]:
+        target = self.getSolvedPuzzle()
+        target_pos = {}
+        for i in range(puzzleSize):
+            for j in range(puzzleSize):
+                target_val = target[i][j]
+                target_pos[target_val] = (i, j)
+        return target_pos
+
+    def getTargetPosition(self, val) -> tuple:
+        return self.target_pos[val]
+
     def getSolvedPuzzle(self):
         """
         Build and return an ordered grid of puzzleSize x puzzleSize (last cell is empty)
@@ -88,7 +111,7 @@ class Puzzle:
         for row in range(puzzleSize):
             line = []
             for col in range(puzzleSize):
-                line.append(row * puzzleSize + col + 1)         # add 1 to start tiles at 1 instead of 0
+                line.append(row * puzzleSize + col + 1)  # add 1 to start tiles at 1 instead of 0
             puzzle.append(line)
 
         # set the last square to blank
@@ -163,6 +186,11 @@ class Puzzle:
                     str += "%2d " % col
             str += "\n"
         print(str)
+        return str
+
+    #
+    def __str__(self):
+        return self.print()
 
     def getPosition(self, target):
         """
@@ -173,7 +201,7 @@ class Puzzle:
         for row in range(puzzleSize):
             for col in range(puzzleSize):
                 if self.tiles[row][col] == target:
-                    return(row, col)
+                    return (row, col)
 
     def getEmptyPosition(self):
         """
@@ -210,16 +238,16 @@ class Puzzle:
         row, col = self.getEmptyPosition()
 
         # replace the numbered tile in place of the empty
-        if move == moveU:               # up
+        if move == moveU:  # up
             self.tiles[row][col] = self.tiles[row - 1][col]
             row -= 1
-        elif move == moveL:             # left
+        elif move == moveL:  # left
             self.tiles[row][col] = self.tiles[row][col - 1]
             col -= 1
-        elif move == moveR:             # right
+        elif move == moveR:  # right
             self.tiles[row][col] = self.tiles[row][col + 1]
             col += 1
-        elif move == moveD:             # down
+        elif move == moveD:  # down
             self.tiles[row][col] = self.tiles[row + 1][col]
             row += 1
 
@@ -252,7 +280,7 @@ class Puzzle:
         :return:
         """
         moves = []
-        moves.append(self.move)       # TODO: is this needed at root?
+        moves.append(self.move)  # TODO: is this needed at root?
         path = self
         while path.parent != None:
             path = path.parent
@@ -261,10 +289,38 @@ class Puzzle:
         moves.reverse()
 
         moveStr = ", ".join(moves)
-        print("Solution (cost=%d): %s" % (self.cost, moveStr))
 
 
-def heuristicCityBlock(puzzle):
+# def heuristicCityBlock(puzzle):
+#     """
+#     City block heuristic: estimate number of moves for each tile to intended location
+#     This is admissible since it never over-estimates the number of moves
+#     :return:
+#     """
+#     # for each tile, count the number of moves to its intended position (assume no other tiles)
+#     sum = 0
+#
+#     for row in range(puzzleSize):
+#         for col in range(puzzleSize):
+#             # expected tile position (+1 because arrays start at 0, tiles start at 1)
+#             expectedTile = row * puzzleSize + col + 1
+#
+#             # the last spot in the board is reserved for empty space, ignore for this heuristic
+#             if expectedTile == (puzzleSize * puzzleSize):
+#                 continue
+#
+#             # get location of expected tile and calculate distance (absolute in case it moves up/left)
+#             actRow, actCol = puzzle.getPosition(expectedTile)
+#             dist = abs(actRow - row) + abs(actCol - col)
+#             # if debug:
+#             #     print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
+#
+#             sum += dist
+#
+#     return sum
+
+
+def heuristicCityBlock(puzzle: Puzzle):
     """
     City block heuristic: estimate number of moves for each tile to intended location
     This is admissible since it never over-estimates the number of moves
@@ -275,28 +331,24 @@ def heuristicCityBlock(puzzle):
 
     # for each tile, count the number of moves to its intended position (assume no other tiles)
     sum = 0
+    # puzzle.print()
 
     for row in range(puzzleSize):
         for col in range(puzzleSize):
-            # expected tile position (+1 because arrays start at 0, tiles start at 1)
-            expectedTile = row * puzzleSize + col + 1
-
-            # the last spot in the board is reserved for empty space, ignore for this heuristic
-            if expectedTile == (puzzleSize * puzzleSize):
+            val = puzzle.tiles[row][col]
+            if val == emptySquare:
                 continue
-
-            # get location of expected tile and calculate distance (absolute in case it moves up/left)
-            actRow, actCol = puzzle.getPosition(expectedTile)
+            actRow, actCol = puzzle.getTargetPosition(val)
             dist = abs(actRow - row) + abs(actCol - col)
-            # if debug:
-            #     print(f'Expected at {row},{col} is Tile {expectedTile}; actually at {actRow},{actCol} (dist={dist})')
-
+            if debug:
+                print(f'{actRow=}, {actCol=}, {val=}, {dist=}')
             sum += dist
 
     end = time.time()
     heuristicTime += end - start
 
     return sum
+
 
 def heuristicMy(puzzle):
     """
@@ -337,15 +389,15 @@ def heuristicMy(puzzle):
 
     return sum
 
+
 def aStar(tiles, whichHeuristic):
     """
     A* search
     :return: Solution node (or None if no solution found), fLimit, nodes checked, moves
     """
-
     global  count
     count = 0
-    node = None 
+    node = None
     expanded = []
     Q = PriorityQueue()
     # get parent node
@@ -354,7 +406,7 @@ def aStar(tiles, whichHeuristic):
     estimate = whichHeuristic(parentNode)
     # put the parent node, node count, and heuristic value in the queue
     Q.put((estimate, count, parentNode))
-    
+
     while not Q.empty():
         if count >= maxNodesPerSearch:
             print('Max nodes exceeded, terminating search. Nodes checked: %d' % nodesChecked)
@@ -398,6 +450,7 @@ def rbfs(tiles, whichHeuristic):
     else:
         print("No solution found")
         return (None, maxsize, nodesChecked, 0)
+
 
 def rbfsMain(node, fLimit, whichHeuristic):
     global nodesChecked
@@ -450,286 +503,4 @@ def rbfsMain(node, fLimit, whichHeuristic):
             break
 
     return result, None
-
-class TestPuzzle(unittest.TestCase):
-
-    def test_scramble(self):
-        puzzle = Puzzle()
-        solved = puzzle.getSolvedPuzzle()
-        puzzle.scramblePuzzle(10)
-        self.assertNotEqual(solved, puzzle.tiles)
-        puzzle.print()
-
-    def test_getPosition(self):
-        """
-        Tests for getPosition
-        :return:
-        """
-        puzzle = Puzzle()
-        target = 1
-        exp = (0, 0)
-        self.assertEqual(exp, puzzle.getPosition(target))
-
-    def test_getEmptyPosition(self):
-        """
-        Test the get empty position function.
-        For a solved puzzle, it should be in the final cell (row = puzzleSize - 1, col = puzzleSize - 1)
-        FOr a 4x4 grid, this will be in position 3,3
-        :return:
-        """
-        puzzle = Puzzle()
-        row, col = puzzle.getEmptyPosition()
-        self.assertEqual(3, row)
-        self.assertEqual(3, col)
-
-    def runTest(self, tiles, searchFunc, heuristic):
-        """
-        Run the specified search function using given heuristic and return runtime in seconds
-        :param puzzle:
-        :param searchFunc:
-        :param heuristic:
-        :return:
-        """
-        start = time.time()                             # get start time
-        (node, fLimit, nodesChecked, moves) = searchFunc(tiles, heuristic)            # run the search function with selected heuristic
-        end = time.time()                               # record runtime
-
-        solutionFound = False
-        if node:
-            moves = node.cost
-            solutionFound = True
-
-        return (nodesChecked, moves, end - start, solutionFound)              # return number of nodes checked and runtime
-
-    def test_data_collection(self):
-        """
-        Try all combinations of searches and collect performance data into a csv
-        :return:
-        """
-        global heuristicTime
-
-        # TODO : this has not been updated to new methods (4/23)
-        # TODO : Matthew update after search functions complete
-        if not collectData:
-            self.skipTest("Data collection skipped")
-
-        # TODO save to csv
-        csvFH = open(csvFilename, 'w', newline='')
-        writer = csv.writer(csvFH)
-        writer.writerow(['m', 'puzzleNum', 'searchFunc', 'heuristic', 'moves', 'nodesChecked', 'runTime (seconds)', 'solutionFound', 'heuristic % runTime', 'heuristic time'])
-
-        # collect data into run data and write it later
-        runData = {}
-        for algo in ['astar', 'rbfs']:
-            runData[algo] = {}
-            for heuristic in ['cityBlock', 'myHeuristic']:
-                runData[algo][heuristic] = {}
-
-        numTrials = 10                                      # run this many tests at each m
-        for m in [10, 20, 30, 40, 50]:                      # run for increasing number of moves from solved puzzle
-
-            runData['astar']['cityBlock'][m] = []
-            runData['astar']['myHeuristic'][m] = []
-            runData['rbfs']['cityBlock'][m] = []
-            runData['rbfs']['myHeuristic'][m] = []
-
-            for n in range(numTrials):                             # TODO : run 10 trials at each m
-                base = Puzzle()
-                base.scramblePuzzle(m)         # ensure all 4 configurations use the same scrambled puzzle
-                baseTiles = base.tiles
-                print('Puzzle Number %d (m=%d)' % (n, m))
-                base.print()
-
-                # # astar with city block heuristic
-                heuristicTime = 0                           # reset heuristic timer
-                (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, aStar, heuristicCityBlock)
-                heuristicPct = heuristicTime / runTime * 100
-                runData['astar']['cityBlock'][m].append([moves, nodesChecked, runTime, solutionFound, heuristicPct, heuristicTime])
-                print('aStar w/ cityBlock: moves=%3d, nodes=%5d, time=%1.6f, heuristicPct=%2.4f' % (moves, nodesChecked, runTime, heuristicPct))
-
-                # astar with my heuristic
-                # (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, aStar, heuristicMy)
-                # runData['astar']['myHeuristic'][m].append([moves, nodesChecked, runTime, solutionFound])
-                # print('aStar w/ myHeur:    moves=%3d, nodes=%5d, time=%1.6f' % (moves, nodesChecked, runTime))
-
-                # rbfs with city block heuristic
-                heuristicTime = 0                           # reset heuristic timer
-                (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, rbfs, heuristicCityBlock)
-                heuristicPct = heuristicTime / runTime * 100
-                runData['rbfs']['cityBlock'][m].append([moves, nodesChecked, runTime, solutionFound, heuristicPct, heuristicTime])
-                print('rbfs  w/ cityBlock: moves=%3d, nodes=%5d, time=%f, heuristicPct=%2.4f' % (moves, nodesChecked, runTime, heuristicPct))
-
-                # rbfs with my heuristic
-                # (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, rbfs, heuristicMy)
-                # runData['rbfs']['myHeuristic'][m].append([moves, nodesChecked, runTime, solutionFound])
-                # print('rbfs  w/ myHeur:    moves=%3d, nodes=%5d, time=%f' % (moves, nodesChecked, runTime))
-
-        # now that all data has been collected, write it grouped by algo/heuristic
-        for algo in runData:
-            for heuristic in runData[algo]:
-                print('Algo = %s, Heuristic = %s' % (algo, heuristic))
-
-                for mValue in runData[algo][heuristic]:
-                    moveSum = 0
-                    nodeSum = 0
-                    timeSum = 0
-                    solnCount = 0
-
-                    for puzzleNum, trial in enumerate(runData[algo][heuristic][mValue]):
-                        (moves, nodesChecked, runTime, solutionFound, heuristicPct, heuristicTime) = trial
-                        writer.writerow([mValue, puzzleNum, algo, heuristic, moves, nodesChecked, runTime, solutionFound, heuristicPct, heuristicTime])
-                        moveSum += moves
-                        nodeSum += nodesChecked
-                        timeSum += runTime
-                        if solutionFound:
-                            solnCount += 1
-
-                    moveAvg = 0
-                    if solnCount:                                           # only average if a puzzle was solved, else 0
-                        moveAvg = int(moveSum / solnCount)                  # average the moves on SOLVED puzzles only
-                    nodeAvg = int(nodeSum / numTrials)
-                    timeAvg = "%.4f" % (timeSum / numTrials)
-                    solnAvg = int(solnCount / numTrials * 100)
-                    print(f' & {mValue} & {timeAvg} & {nodeAvg} & {moveAvg} & {solnAvg} \\\\')
-        print('Data collection complete, results written to: %s' % csvFilename)
-
-    def test_rbfs(self):
-        """
-        Functional tests for rbfs search algo
-        :return:
-        """
-        # base case: already solved puzzle (0 moves)
-        puzzle = Puzzle()
-        (node, fLimit, nodesChecked, moves) = rbfs(puzzle.tiles, heuristicCityBlock)
-        print('node %s' % node)
-        self.assertEqual(0, node.cost)
-
-        # simple case: puzzle off by one move
-        puzzle = Puzzle()
-        puzzle.moveEmpty(moveL)
-        print("Solving puzzle below")
-        puzzle.print()
-        (node, fLimit, nodesChecked, moves) = rbfs(puzzle.tiles, heuristicCityBlock)
-        self.assertIsNotNone(node, "failed to solve puzzle")
-        self.assertEqual(1, node.cost)
-
-        # simple case: puzzle off by 2 moves
-        puzzle = Puzzle()
-        puzzle.moveEmpty(moveL)
-        puzzle.moveEmpty(moveU)
-        print("Solving puzzle below")
-        puzzle.print()
-        (node, fLimit, nodesChecked, moves) = rbfs(puzzle.tiles, heuristicCityBlock)
-        self.assertEqual(2, node.cost)
-
-        # use puzzle scrambled by m moves
-    def test_rbfs_m_values(self):
-        m = 20
-        puzzle = Puzzle()
-        puzzle.scramblePuzzle(m)
-        # puzzle.moveEmpty(moveL)
-        # puzzle.moveEmpty(moveL)
-        # puzzle.moveEmpty(moveU)
-        # puzzle.moveEmpty(moveR)
-        # puzzle.moveEmpty(moveU)
-        # puzzle.moveEmpty(moveL)
-        # puzzle.moveEmpty(moveD)
-
-        print("Solving puzzle below")
-        puzzle.print()
-        (node, fLimit, nodesChecked, moves) = rbfs(puzzle.tiles, heuristicCityBlock)
-        self.assertIsNotNone(node, "Failed to find solution")
-        self.assertTrue(node.cost <= m, 'Solution took move moves than scramble')
-        print('Nodes checked: %d' % nodesChecked)
-
-
-    def test_astar(self):
-        """
-        Functional tests for Sstar search algo
-        :return:
-        """
-        # base case: already solved puzzle (0 moves)
-        puzzle = Puzzle()
-        (node, fLimit, count, moves) = aStar(puzzle.tiles, heuristicCityBlock)
-        print('node %s' % node)
-        self.assertEqual(0, node.cost)
-
-        # simple case: puzzle off by one move
-        puzzle = Puzzle()
-        puzzle.moveEmpty(moveL)
-        print("Solving puzzle below")
-        puzzle.print()
-        (node, fLimit, count, moves) = aStar(puzzle.tiles, heuristicCityBlock)
-        if node:
-            print('Solved with cost %d' % node.cost)
-        self.assertEqual(1, node.cost)
-
-        # simple case: puzzle off by 2 moves
-        puzzle = Puzzle()
-        puzzle.moveEmpty(moveL)
-        puzzle.moveEmpty(moveU)
-        print("Solving puzzle below")
-        puzzle.print()
-        (node, fLimit, count, moves) = aStar(puzzle.tiles, heuristicCityBlock)
-        if node:
-            print('Solved with cost %d' % node.cost)
-        self.assertEqual(2, node.cost)
-
-    def test_cityBlock(self):
-        """
-        Unit tests for city block heuristic
-        :return:
-        """
-        puzzle = Puzzle()
-
-        # base case: solved puzzle, city block should return 0
-        self.assertEqual(0, heuristicCityBlock(puzzle))
-
-        scrambled = [
-            [4,   1, 3,           2],
-            [5,   6, emptySquare, 8],
-            [10,  9, 7,          11],
-            [15, 14, 13,         12]
-        ]
-
-        puzzle.tiles = scrambled
-
-        # using above puzzle, expected city block is (tiles 1 through 15 distances added):
-        # e.g. tile 1 is 1 spot away, tile 2 is 2, tile 3 is where it belongs, etc
-        expected = 1 + 2 + 0 + 3 + 0 + 0 + 1 + 0 + 1 + 1 + 1 + 1 + 2 + 0 + 2
-        # tiles    1   2   3   4   5   6   7   8   9  10  11  12  13  14  15
-        self.assertEqual(expected, heuristicCityBlock(puzzle))
-
-    def test_myHeuristic(self):
-        """
-        Unit tests for my heuristic
-        :return:
-        """
-        puzzle = Puzzle()
-
-        # base case: solved puzzle, city block should return 0
-        self.assertEqual(0, heuristicCityBlock(puzzle))
-
-        scrambled = [
-            [4,   1, 3,           2],
-            [5,   6, emptySquare, 8],
-            [10,  9, 7,          11],
-            [15, 14, 13,         12]
-        ]
-
-        puzzle.tiles = scrambled
-
-        # using above puzzle, expected my heuristic is (tiles 1 through 15 distances added):
-        # e.g. tile 1 is 1 spot away from target and 2 away from emtpy,
-        # tile 2 is 2 away from target and 2 from empty,
-        # tile 3 is where it belongs, etc
-        expected =  (1 + 2) + (2 + 2) + 0 + (3 + 3) + 0 + 0 + (1 + 1) + 0
-        # tile       1         2        3    4        5   6    7        8
-        expected += (1 + 2) + (1 + 3) + (1 + 2) + (1 + 3) + (2 + 2) + 0 + (2 + 4)
-        #            9         10        11       12        13        14   15
-        self.assertEqual(expected, heuristicMy(puzzle))
-
-
-if __name__ == '__main__':
-    unittest.main()
 
