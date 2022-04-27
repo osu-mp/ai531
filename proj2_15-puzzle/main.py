@@ -1,3 +1,10 @@
+#!/usr/bin/python3
+
+# AI 531 - Project 2 - 15 Puzzle
+# Wadood Alam
+# Joe Nguyen
+# Matthew Pacey
+
 import csv
 import time
 import unittest
@@ -10,11 +17,10 @@ moveR = 'R'  # if tile is on an edge, some movements will not be allowed
 moveU = 'U'
 moveD = 'D'
 
-heuristicTime = 0
 
 class TestPuzzle(unittest.TestCase):
     """
-    Unit tests and data collection for 15 puzzle routines 
+    Unit tests and data collection for 15 puzzle routines
     """
 
     def test_scramble(self):
@@ -71,8 +77,10 @@ class TestPuzzle(unittest.TestCase):
         Try all combinations of searches and collect performance data into a csv
         :return:
         """
-        global heuristicTime
+        # global heuristicTime
 
+        # TODO : this has not been updated to new methods (4/23)
+        # TODO : Matthew update after search functions complete
         if not collectData:
             self.skipTest("Data collection skipped")
 
@@ -80,7 +88,7 @@ class TestPuzzle(unittest.TestCase):
         csvFH = open(csvFilename, 'w', newline='')
         writer = csv.writer(csvFH)
 
-        # header of csv 
+        # header of csv
         writer.writerow(
             ['m', 'puzzleNum', 'searchFunc', 'heuristic', 'moves', 'nodesChecked', 'runTime (seconds)', 'solutionFound',
              'heuristic % runTime', 'heuristic time'])
@@ -93,7 +101,9 @@ class TestPuzzle(unittest.TestCase):
                 runData[algo][heuristic] = {}
 
         numTrials = 10  # run this many tests at each m
-        for m in [10, 20, 30, 40, 50]:  # run for increasing number of moves from solved puzzle
+        TRIALS = [10, 20, 30, 40, 50]
+        # TRIALS = [10]
+        for m in TRIALS:  # run for increasing number of moves from solved puzzle
 
             runData['astar']['cityBlock'][m] = []
             runData['astar']['myHeuristic'][m] = []
@@ -122,7 +132,8 @@ class TestPuzzle(unittest.TestCase):
                 (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, aStar,
                                                                              heuristicMy)
                 heuristicPct = heuristicTime / runTime * 100
-                runData['astar']['myHeuristic'][m].append([moves, nodesChecked, runTime, solutionFound])
+                runData['astar']['myHeuristic'][m].append(
+                    [moves, nodesChecked, runTime, solutionFound, heuristicPct, heuristicTime])
                 print('aStar w/ myHeuristic: moves=%3d, nodes=%5d, time=%1.6f, heuristicPct=%2.4f' % (
                     moves, nodesChecked, runTime, heuristicPct))
 
@@ -139,7 +150,8 @@ class TestPuzzle(unittest.TestCase):
                 heuristicTime = 0  # reset heuristic timer
                 (nodesChecked, moves, runTime, solutionFound) = self.runTest(baseTiles, rbfs, heuristicMy)
                 heuristicPct = heuristicTime / runTime * 100
-                runData['rbfs']['myHeuristic'][m].append([moves, nodesChecked, runTime, solutionFound])
+                runData['rbfs']['myHeuristic'][m].append(
+                    [moves, nodesChecked, runTime, solutionFound, heuristicPct, heuristicTime])
                 print('rbfs  w/ myHeuristic: moves=%3d, nodes=%5d, time=%f, heuristicPct=%2.4f' % (
                     moves, nodesChecked, runTime, heuristicPct))
 
@@ -171,7 +183,7 @@ class TestPuzzle(unittest.TestCase):
                     nodeAvg = int(nodeSum / numTrials)
                     timeAvg = "%.4f" % (timeSum / numTrials)
                     solnAvg = int(solnCount / numTrials * 100)
-                    
+
                     # printout for tables in latex report
                     print(f' & {mValue} & {timeAvg} & {nodeAvg} & {moveAvg} & {solnAvg} \\\\')
 
@@ -206,10 +218,9 @@ class TestPuzzle(unittest.TestCase):
         (node, fLimit, nodesChecked, moves) = rbfs(puzzle.tiles, heuristicCityBlock)
         self.assertEqual(2, node.cost)
 
+        # use puzzle scrambled by m moves
+
     def test_rbfs_m_values(self):
-        """
-        Test rbfs with randomly generated puzzle
-        """
         m = 20
         puzzle = Puzzle()
         puzzle.scramblePuzzle(m)

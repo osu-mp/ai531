@@ -1,68 +1,70 @@
+import copy
 import time
-import main
+# import main
+from typing import List
 
+import utility
 from puzzle import Puzzle, emptySquare, puzzleSize, heuristicCityBlock
 
-def count_conflicts_row(puzzle: Puzzle, row_id: int):
+
+def count_conflicts_line(config: List[int], sol: List[int]):
     res = 0
+    counts = [0 for x in range(puzzleSize)]
     for i in range(puzzleSize):
-        val_i = puzzle.tiles[row_id][i]
-        if val_i == emptySquare: continue
-        target_x_i, target_y_i = puzzle.getTargetPosition(val_i)
-        if target_x_i == row_id:
+        val_i = config[i]
+        if val_i == emptySquare:
+            continue
+        if val_i not in sol:
+            continue
+        solved_i_pos = sol.index(val_i)
 
-            for j in range(i + 1, puzzleSize):
-                if i == j: continue
+        for j in range(i + 1, puzzleSize):
+            val_j = config[j]
+            if val_j == emptySquare:
+                continue
+            if val_j not in sol:
+                continue
 
-                val_j = puzzle.tiles[row_id][j]
-                if val_j == emptySquare: continue
+            solved_j_pos = sol.index(val_j)
+            if solved_i_pos > solved_j_pos and i < j:
+                counts[i] += 1
+            if solved_i_pos < solved_j_pos and i > j:
+                counts[i] += 1
 
-                target_x_j, target_y_j = puzzle.getTargetPosition(val_j)
-                if target_x_j == row_id:
-                    if target_y_i > target_y_j and i < j:
-                        res += 1
-                    if target_y_i < target_y_j and i > j:
-                        res += 1
+    if max(counts) == 0:
+        return 0
+    else:
+        argmax_id = counts.index(max(counts))
+        config[argmax_id] = -1
+        return 1 + count_conflicts_line(config, sol)
+
+
+def linear_conflict_heuristic(puzzle: Puzzle):
+    # global heuristicTime
+    res = 0
+    config = copy.deepcopy(puzzle.tiles)  # type: List[List[int]]
+    row_configs = [config[i] for i in range(puzzleSize)]
+    col_configs = list(map(list, zip(*config)))
+
+    for i in range(puzzleSize):
+        res += count_conflicts_line(row_configs[i], utility.row_sols[i]) * 2
+    for i in range(puzzleSize):
+        res += count_conflicts_line(col_configs[i], utility.col_sols[i]) * 2
 
     return res
 
-def count_conflicts_col(puzzle: Puzzle, col_id: int):
-    res = 0
-    for i in range(puzzleSize):
-        val_i = puzzle.tiles[i][col_id]
-        if val_i == emptySquare: continue
-        target_x_i, target_y_i = puzzle.getTargetPosition(val_i)
-        if target_y_i == col_id:
 
-            for j in range(i + 1, puzzleSize):
-                if i == j: continue
-
-                val_j = puzzle.tiles[j][col_id]
-                if val_j == emptySquare: continue
-
-                target_x_j, target_y_j = puzzle.getTargetPosition(val_j)
-                if target_y_j == col_id:
-                    if target_x_i > target_x_j and i < j:
-                        res += 1
-                    if target_x_i < target_x_j and i > j:
-                        res += 1
-
-    return res
-
+#
 def heuristicMy(puzzle: Puzzle):
-    """
-    Count the total conflicts in the puzzle (rows + cols) and add this to the city block estimate
-    """
+    # global heuristicTime
     start = time.time()
-    cnt_conflicts = 0
     city_block = heuristicCityBlock(puzzle)
-    for i in range(puzzleSize):
-        cnt_conflicts += count_conflicts_row(puzzle, i)
+    linear_conflict = linear_conflict_heuristic(puzzle)
+    utility.heuristicTime += time.time() - start
+    return city_block + linear_conflict
 
-    for i in range(puzzleSize):
-        cnt_conflicts += count_conflicts_col(puzzle, i)
-    
-    # print(f'{res=}')
-    main.heuristicTime += time.time() - start
 
-    return city_block + cnt_conflicts
+if __name__ == '__main__':
+    puzzle = Puzzle(tiles=[[4, 1, 2, 3], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, emptySquare]])
+    # print(heuristicMy(puzzle))
+    print(linear_conflict_heuristic(puzzle))

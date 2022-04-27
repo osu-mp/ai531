@@ -12,7 +12,8 @@ from queue import PriorityQueue
 from sys import maxsize
 from typing import Dict
 
-import main
+# heuristicTime = 0
+import utility
 
 """
 Assignment Description
@@ -42,7 +43,7 @@ To study how the amount of search varies with the problem difficulty, we will ge
 For each m, plot the average time consumed, nodes searched, and the optimal solution lengths for the 2 algorithms and the 2 heuristics. You might find that your algorithm is taking too long for some inputs and heuristics. Bound the time and/or the number of nodes searched to a maximum and report what fraction of the problems are solved in that bound. Report the other statistics on the solved problems.
 """
 
-emptySquare = '_' # empty tile (only place that adjacent tiles can move)
+emptySquare = '_'  # empty tile (only place that adjacent tiles can move)
 puzzleSize = 4  # number of rows and cols for puzzle (4 means 4x4 grid with 15 numbers and one emtpy cell)
 collectData = True  # set to True to generate test data (long runtime)
 csvFilename = 'data.csv'  # where test runtimes are written
@@ -109,8 +110,8 @@ class Puzzle:
         [13, 14, 15, emptySquare]
         :return:
         """
-	# TODO : cache the solved solution
-	
+        # TODO : cache the solved solution
+
         puzzle = []
         for row in range(puzzleSize):
             line = []
@@ -192,10 +193,11 @@ class Puzzle:
         print(str)
         return str
 
+    #
     def __str__(self):
-	"""
-	Print the tile current config (for debug)
-	"""
+        """
+        Print the tile current config (for debug)
+        """
         return self.print()
 
     def getPosition(self, target):
@@ -295,7 +297,8 @@ class Puzzle:
         moves.reverse()
 
         moveStr = ", ".join(moves)
-	print("Solution: %s" % moveStr)
+        print("Solution: %s" % moveStr)
+
 
 def heuristicCityBlock(puzzle: Puzzle):
     """
@@ -320,9 +323,10 @@ def heuristicCityBlock(puzzle: Puzzle):
 
     end = time.time()
     runtime = end - start
-    main.heuristicTime += runtime
+    utility.heuristicTime += runtime
 
     return sum
+
 
 def aStar(tiles, whichHeuristic):
     """
@@ -369,6 +373,8 @@ def aStar(tiles, whichHeuristic):
 
 
 nodesChecked = 0  # global var to keep track of nodes checked in rbfs (both searches should reset at start)
+
+
 def rbfs(tiles, whichHeuristic):
     global nodesChecked
 
