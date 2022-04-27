@@ -1,14 +1,11 @@
 import copy
 import time
-# import main
-from typing import List
-
 import utility
+
+from typing import List
 from puzzle import Puzzle, emptySquare, puzzleSize, heuristicCityBlock
 
-
 def count_conflicts_line(config: List[int], sol: List[int]):
-    res = 0
     counts = [0 for x in range(puzzleSize)]
     for i in range(puzzleSize):
         val_i = config[i]
@@ -38,9 +35,7 @@ def count_conflicts_line(config: List[int], sol: List[int]):
         config[argmax_id] = -1
         return 1 + count_conflicts_line(config, sol)
 
-
 def linear_conflict_heuristic(puzzle: Puzzle):
-    # global heuristicTime
     res = 0
     config = copy.deepcopy(puzzle.tiles)  # type: List[List[int]]
     row_configs = [config[i] for i in range(puzzleSize)]
@@ -53,10 +48,7 @@ def linear_conflict_heuristic(puzzle: Puzzle):
 
     return res
 
-
-#
 def heuristicMy(puzzle: Puzzle):
-    # global heuristicTime
     start = time.time()
     city_block = heuristicCityBlock(puzzle)
     linear_conflict = linear_conflict_heuristic(puzzle)

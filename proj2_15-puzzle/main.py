@@ -77,10 +77,6 @@ class TestPuzzle(unittest.TestCase):
         Try all combinations of searches and collect performance data into a csv
         :return:
         """
-        # global heuristicTime
-
-        # TODO : this has not been updated to new methods (4/23)
-        # TODO : Matthew update after search functions complete
         if not collectData:
             self.skipTest("Data collection skipped")
 
@@ -171,10 +167,10 @@ class TestPuzzle(unittest.TestCase):
                         writer.writerow(
                             [mValue, puzzleNum, algo, heuristic, moves, nodesChecked, runTime, solutionFound,
                              heuristicPct, heuristicTime])
-                        moveSum += moves
                         nodeSum += nodesChecked
                         timeSum += runTime
                         if solutionFound:
+                            moveSum += moves
                             solnCount += 1
 
                     moveAvg = 0

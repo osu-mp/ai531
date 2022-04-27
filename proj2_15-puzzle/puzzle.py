@@ -8,12 +8,11 @@
 import copy
 import random
 import time
+import utility
+
 from queue import PriorityQueue
 from sys import maxsize
 from typing import Dict
-
-# heuristicTime = 0
-import utility
 
 """
 Assignment Description
