@@ -1,3 +1,10 @@
+#!/usr/bin/python3
+
+# AI 531 - Project 2 - 15 Puzzle
+# Wadood Alam
+# Joe Nguyen
+# Matthew Pacey
+
 import csv
 import time
 import unittest
@@ -94,8 +101,8 @@ class TestPuzzle(unittest.TestCase):
                 runData[algo][heuristic] = {}
 
         numTrials = 10  # run this many tests at each m
-        # TRIALS = [10, 20, 30, 40, 50]
-        TRIALS = [10]
+        TRIALS = [10, 20, 30, 40, 50]
+        # TRIALS = [10]
         for m in TRIALS:  # run for increasing number of moves from solved puzzle
 
             runData['astar']['cityBlock'][m] = []

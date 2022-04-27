@@ -1,0 +1,9 @@
+The code here solves the 15 puzzle using a* and recursive best first search.
+Each search uses either the City Block Heuristic of the Linear Conflict Heuristic to evaluate which nodes to search.
+
+To run all tests:
+> .\main.py
+
+To run just data collection for report:
+> .\main.py TestPuzzle.test_data_collection
+This will write out the results to data.csv in the current directory.
